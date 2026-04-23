@@ -2,6 +2,10 @@
 
 A discrete-time dynamical systems model exploring how seafood fraud propagates through supply chains and how buyer awareness, market forces, and fishing practices create feedback loops that either stabilize or collapse fish stocks.
 
+## Website
+Check out our website for more information and system simulations!</br>
+https://dynamics-between-seafood-fraudsters-and-buyers.streamlit.app/
+
 ## Motivation
 
 Seafood is one of the most heavily traded food commodities globally, supplying roughly a quarter of the world's animal protein intake. The complexity of global supply chains makes it difficult to ensure the authenticity and traceability of seafood products, creating opportunities for fraud — mislabelling, substitution, adulteration, and unethical harvesting. This project models the interactions between key players in the supply chain to understand when fraud self-corrects and when it spirals out of control.
