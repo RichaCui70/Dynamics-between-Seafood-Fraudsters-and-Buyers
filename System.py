@@ -19,7 +19,7 @@ DEFAULT_PARAMS = {
     'e_sm': 1.0,
     
     'K': 1.0,
-    'F_threshold': 0.5,
+    'F_threshold': 0.1,
     'r': 0.225,
     
     'q0': 0.07,
