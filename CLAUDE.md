@@ -35,13 +35,18 @@ The project has a live Streamlit app: https://dynamics-between-seafood-fraudster
 
 **Seafood & Effort:**
 ```
-S_{t+1} = S_t * exp(γ_S * (r*(1 - S_t/K) - q*E_t))
-E_{t+1} = E_t * exp(γ_E * (q * P^w_t * S_t - C_t))
+S_{t+1} = S_t * exp(γ_S * (r*(1 - S_t/K) - q_t*E_t))
+E_{t+1} = E_t * exp(γ_E * (q_t * P^w_t * S_t - C_t))
 ```
 
 **Harvest:**
 ```
-H_t = q * E_t * S_t
+H_t = q_t * E_t * S_t
+```
+
+**Seafood catchability**
+```
+q_t = (q1 - q0)*F_t + q0
 ```
 
 **Fishing cost and wholesale price (fraud-modulated):**

@@ -14,8 +14,8 @@ INTRO = r'''
     The relationship between fishers and seafood is shown through the effort $(E)$ of fishers in harvesting seafood $(S)$. Seafood has an intrinsic growth rate $(r)$ and some intrinsic carrying capacity $(K)$. Fishers' effort grows when the cost of fishing $(C_{t})$ decreases, and the revenue of fishing $(qP^{w}_{t}S_{t})$ increases, where $q$ represents seafood catchability and $P^{w}_{t}$ represents the price per unit of seafood. In other words, effort grows when their profit margin expands. As effort grows, they harvest more seafood ($qE_{t}$), regualting/decreasing seafood levels, vice versa. The relationship between effort and seafood is shown through:
     
     $
-    S_{t+1} = S_{t}e^{\gamma_{S}(r(1-\frac{S_{t}}{K}) - qE_{t})} \\
-    E_{t+1} = E_{t}e^{\gamma_{E}(qP^{w}_{t}S_{t} - C_{t})}
+    S_{t+1} = S_{t}e^{\gamma_{S}(r(1-\frac{S_{t}}{K}) - q_{t}E_{t})} \\
+    E_{t+1} = E_{t}e^{\gamma_{E}(q_{t}P^{w}_{t}S_{t} - C_{t})}
     $
     
     In this system, $K$ is always set to one, such that bounding seafood between zero and one allows for a more simple mathematical analysis of the system. It's easier define as well: seafood at one representing natural maximum amount of seafood the environment can carry, and seafood at zero representing extinction.
@@ -23,7 +23,8 @@ INTRO = r'''
     Effort is shown as any non-negative number. This tells us the magnitude of their efforts in harvesting seafood. Their effort directly correlates to the amount of seafood harvested $(H)$, shown through:
     
     $
-    H_{t} = qE_{t}S_{t}
+    q_{t} = (q_{1}-q_{0})F_{t} + q_{0}\\
+    H_{t} = q_{t}E_{t}S_{t}
     $
     
     Harvest can congruent to the seafood supply available to wholesalers and buyers.
