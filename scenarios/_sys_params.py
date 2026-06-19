@@ -13,7 +13,7 @@ _GROUPS = [
     ("Market", [
         ('gamma_m', 'γM  (market price scaling)',       1.0,  50.0, 0.5),
         ('gamma_p', 'γP  (wholesale price scaling)',    0.1,  5.0,  0.05),
-        ('e_d',     'εd  (demand elasticity)',          0.1,  3.0,  0.05),
+        ('e_d',     'εd  (demand elasticity)',          0.0001,  3.0,  0.05),
         ('e_sw',    'εsw (wholesale supply elast.)',    0.1,  2.0,  0.05),
         ('e_sm',    'εsm (market supply elast.)',       0.1,  2.0,  0.05),
     ]),

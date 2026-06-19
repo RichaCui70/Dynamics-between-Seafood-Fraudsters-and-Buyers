@@ -148,10 +148,10 @@ def hypothesis_tab():
 
         with col_p:
             st.markdown("#### Parameters")
-            alpha_low   = st.slider("α low  (A, C.1, C.2)",      0.0,  1.0,  0.0,                                  0.05,  key="hyp_a_low")
-            alpha_high  = st.slider("α high (B, D.1, D.2)",      0.0,  1.0,  1.0,                                  0.05,  key="hyp_a_high")
-            e_d_low     = st.slider("εd low  (C.1, D.1)",        0.1,  2.0,  0.25,                                 0.05,  key="hyp_ed_low")
-            e_d_high    = st.slider("εd high (C.2, D.2)",        0.1,  3.0,  1.25,                                 0.05,  key="hyp_ed_high")
+            alpha_low   = st.slider("α low  (A, C.1, C.2)",      0.0,  1.0,  0.0,                                 0.05,  key="hyp_a_low")
+            alpha_high  = st.slider("α high (B, D.1, D.2)",      0.0,  1.0,  1.0,                                 0.05,  key="hyp_a_high")
+            e_d_low     = st.slider("εd low  (C.1, D.1)",        0.0001,  0.1,  0.0001,                           0.0001, key="hyp_ed_low")
+            e_d_high    = st.slider("εd high (C.2, D.2)",        1.0,  3.0,  1.5,                                 0.05,  key="hyp_ed_high")
 
         with col_t:
             st.markdown("#### Scenario definitions")
