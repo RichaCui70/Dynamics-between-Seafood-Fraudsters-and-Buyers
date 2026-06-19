@@ -16,7 +16,7 @@ DEFAULT_PARAMS = {
     
     'e_d': 1.0,
     'e_sw': 0.95,
-    'e_sm': 0.5,
+    'e_sm': 1.0,
     
     'K': 1.0,
     'F_threshold': 0.5,

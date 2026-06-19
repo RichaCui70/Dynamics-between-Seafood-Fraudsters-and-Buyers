@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 
 from System import DynamicalSystem, DEFAULT_PARAMS
 from scenarios.constants import FULL_INIT, _PW0, _C0, _Q0, COLORS4, ECON_COLORS, HARVEST_COLOR
+from scenarios._sys_params import sys_params_ui
 
 _BURN_FRAC = 0.6
 _SIM_TIME  = 400
@@ -39,8 +40,11 @@ def _blast_params(alpha: float) -> dict:
 def _run_scenario(
     F_init: float, FP_init: float, alpha: float,
     r: float, F_threshold: float, e_d: float,
+    sys_params: tuple = (),
 ) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update({'r': r, 'F_threshold': F_threshold, 'e_d': e_d})
     p.update(_blast_params(alpha))
     state = {
@@ -69,8 +73,11 @@ def _pct_change(sc_val: float, null_val: float) -> float:
 def _run_scenario_ts(
     F_init: float, FP_init: float, alpha: float,
     r: float, F_threshold: float, e_d: float,
+    sys_params: tuple = (),
 ) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update({'r': r, 'F_threshold': F_threshold, 'e_d': e_d})
     p.update(_blast_params(alpha))
     state = {
@@ -131,15 +138,18 @@ def hypothesis_tab():
         st.warning("Select at least one metric.")
         return
 
+    sys_t = sys_params_ui("hyp")
+    _sys_t_dict = dict(sys_t)
+    r           = _sys_t_dict['r']
+    F_threshold = _sys_t_dict['F_threshold']
+
     with st.expander("Scenario definitions & parameters", expanded=False):
         col_p, col_t = st.columns([1, 1.5], gap="large")
 
         with col_p:
             st.markdown("#### Parameters")
-            r           = st.slider("r (growth rate)",           0.05, 0.50, float(DEFAULT_PARAMS['r']),           0.005, key="hyp_r")
-            F_threshold = st.slider("F̂ (detection threshold)",   0.05, 0.95, float(DEFAULT_PARAMS['F_threshold']), 0.05,  key="hyp_ft")
             alpha_low   = st.slider("α low  (A, C.1, C.2)",      0.0,  1.0,  0.0,                                  0.05,  key="hyp_a_low")
-            alpha_high  = st.slider("α high (B, D.1, D.2)",      0.0,  1.0,  0.5,                                  0.05,  key="hyp_a_high")
+            alpha_high  = st.slider("α high (B, D.1, D.2)",      0.0,  1.0,  1.0,                                  0.05,  key="hyp_a_high")
             e_d_low     = st.slider("εd low  (C.1, D.1)",        0.1,  2.0,  0.25,                                 0.05,  key="hyp_ed_low")
             e_d_high    = st.slider("εd high (C.2, D.2)",        0.1,  3.0,  1.25,                                 0.05,  key="hyp_ed_high")
 
@@ -169,11 +179,11 @@ def hypothesis_tab():
     }
 
     with st.spinner("Running simulations…"):
-        null_avgs = _run_scenario(_NULL_F, _NULL_FP, 0.0, r, F_threshold, _e_d_default)
+        null_avgs = _run_scenario(_NULL_F, _NULL_FP, 0.0, r, F_threshold, _e_d_default, sys_t)
         scenario_avgs = {
             sc: _run_scenario(
                 float(defn['F']), float(defn['FP']), float(defn['alpha']),
-                r, F_threshold, float(defn['e_d']),
+                r, F_threshold, float(defn['e_d']), sys_t,
             )
             for sc, defn in _SCENARIO_DEFS.items()
         }
@@ -273,7 +283,7 @@ def hypothesis_tab():
         ts_cache = {
             sc: _run_scenario_ts(
                 _ts_params[sc]['F'], _ts_params[sc]['FP'],
-                _ts_params[sc]['alpha'], r, F_threshold, _ts_params[sc]['e_d'],
+                _ts_params[sc]['alpha'], r, F_threshold, _ts_params[sc]['e_d'], sys_t,
             )
             for sc in selected_ts
         }
