@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .constants import COLORS4
+from .constants import COLORS4, ECON_COLORS
 
 
 def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4):
@@ -114,12 +114,6 @@ def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
         margin=dict(t=100, b=40),
     )
     return fig
-
-
-ECON_COLORS = {
-    'Pm': '#FF8C00', 'Pw': '#8B4513',
-    'Rev': '#6A5ACD', 'Cost': '#708090',
-}
 
 
 def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
