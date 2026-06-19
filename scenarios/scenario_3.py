@@ -5,6 +5,7 @@ from System import DynamicalSystem, DEFAULT_PARAMS
 from .constants import _PW0, _C0, _Q0, FULL_INIT
 from .plots import plot_bifurcation, plot_return_maps, plot_ts_with_economics
 from ._status import scenario_header, status_indicator
+from ._sys_params import sys_params_ui
 
 
 _FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
@@ -20,8 +21,11 @@ def _blast_params(alpha: float) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def s3_time_series(alpha_val: float, ft_val: float, sim_time: int) -> dict:
+def s3_time_series(alpha_val: float, ft_val: float, sim_time: int,
+                   sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update(_blast_params(alpha_val))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -32,12 +36,15 @@ def s3_time_series(alpha_val: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s3_bifurcation(a_min: float, a_max: float, resolution: int,
-                   bif_time: int, burn_frac: float, ft_val: float) -> tuple:
+                   bif_time: int, burn_frac: float, ft_val: float,
+                   sys_params: tuple = ()) -> tuple:
     a_sweep = np.linspace(a_min, a_max, resolution)
     burn = int(bif_time * burn_frac)
     ba_a, ba_S, ba_E = [], [], []
     for av in a_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update(_blast_params(float(av)))
         p['F_threshold'] = ft_val
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -53,8 +60,11 @@ def s3_bifurcation(a_min: float, a_max: float, resolution: int,
 
 
 @st.cache_data(show_spinner=False)
-def s3_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int) -> dict:
+def s3_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
+                      sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update(_blast_params(alpha_hold))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -65,12 +75,15 @@ def s3_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s3_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
-                      resolution: int, bif_time: int, burn_frac: float) -> tuple:
+                      resolution: int, bif_time: int, burn_frac: float,
+                      sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
     burn = int(bif_time * burn_frac)
     bf_f, bf_S, bf_E = [], [], []
     for ft in ft_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update(_blast_params(alpha_hold))
         p['F_threshold'] = float(ft)
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -93,7 +106,7 @@ def scenario_3():
         "A single destruction intensity α ∈ [0, 1] jointly scales all three."
     )
 
-    with st.expander("Parameters", expanded=False):
+    with st.expander("Analysis Parameters", expanded=False):
         colA, colB = st.columns(2, gap="large")
 
         with colA:
@@ -142,6 +155,8 @@ def scenario_3():
                 "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="s3_ftrng",
             )
 
+    sys_t = sys_params_ui("s3")
+
     if not s3_a_vals:
         st.warning("Select at least one *α* value.")
         return
@@ -160,20 +175,20 @@ def scenario_3():
         "Running time-series simulations (F_threshold sweep)",
         "Computing bifurcation diagram (F_threshold sweep)",
     ]):
-        ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA) for a in s3_a_vals}
+        ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
         t3_A = np.arange(s3_simA + 1)
         ba_a, ba_S, ba_E = s3_bifurcation(
             float(s3_rng[0]), float(s3_rng[1]), s3_resA, s3_bifA_iter, 0.6,
-            float(s3_ft_A),
+            float(s3_ft_A), sys_t,
         )
         ts3_ft = {
-            ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB)
+            ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
             for ft in s3_ft_vals
         }
         t3_B = np.arange(s3_simB + 1)
         bf_f, bf_S, bf_E = s3_bifurcation_ft(
             float(s3_a_hold), float(s3_ft_rng[0]), float(s3_ft_rng[1]),
-            s3_resB, s3_bifB_iter, 0.6,
+            s3_resB, s3_bifB_iter, 0.6, sys_t,
         )
 
     bp_labels = [

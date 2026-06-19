@@ -6,6 +6,7 @@ from System import DynamicalSystem, DEFAULT_PARAMS
 from .constants import _C0, _Q0, FULL_INIT
 from .plots import plot_4var_ts, plot_bifurcation, plot_return_maps
 from ._status import scenario_header, status_indicator
+from ._sys_params import sys_params_ui
 
 
 _FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
@@ -20,8 +21,11 @@ def _eez_params(beta: float) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def s4_time_series(beta_val: float, ft_val: float, sim_time: int) -> dict:
+def s4_time_series(beta_val: float, ft_val: float, sim_time: int,
+                   sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update(_eez_params(beta_val))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -32,12 +36,15 @@ def s4_time_series(beta_val: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s4_bifurcation(b_min: float, b_max: float, resolution: int,
-                   bif_time: int, burn_frac: float, ft_val: float) -> tuple:
+                   bif_time: int, burn_frac: float, ft_val: float,
+                   sys_params: tuple = ()) -> tuple:
     b_sweep = np.linspace(b_min, b_max, resolution)
     burn = int(bif_time * burn_frac)
     bb_b, bb_S, bb_E = [], [], []
     for bv in b_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update(_eez_params(float(bv)))
         p['F_threshold'] = ft_val
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -53,8 +60,11 @@ def s4_bifurcation(b_min: float, b_max: float, resolution: int,
 
 
 @st.cache_data(show_spinner=False)
-def s4_time_series_ft(beta_hold: float, ft_val: float, sim_time: int) -> dict:
+def s4_time_series_ft(beta_hold: float, ft_val: float, sim_time: int,
+                      sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update(_eez_params(beta_hold))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -65,12 +75,15 @@ def s4_time_series_ft(beta_hold: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s4_bifurcation_ft(beta_hold: float, ft_min: float, ft_max: float,
-                      resolution: int, bif_time: int, burn_frac: float) -> tuple:
+                      resolution: int, bif_time: int, burn_frac: float,
+                      sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
     burn = int(bif_time * burn_frac)
     bf_f, bf_S, bf_E = [], [], []
     for ft in ft_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update(_eez_params(beta_hold))
         p['F_threshold'] = float(ft)
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
@@ -88,13 +101,16 @@ def s4_bifurcation_ft(beta_hold: float, ft_min: float, ft_max: float,
 @st.cache_data(show_spinner=False)
 def s4_stability_heatmap(c1_min: float, c1_max: float,
                          q1_min: float, q1_max: float,
-                         resolution: int) -> tuple:
+                         resolution: int,
+                         sys_params: tuple = ()) -> tuple:
     c1_arr = np.linspace(c1_min, c1_max, resolution)
     q1_arr = np.linspace(q1_min, q1_max, resolution)
     stable_grid = np.full((resolution, resolution), np.nan)
     for i, q1 in enumerate(q1_arr):
         for j, c1 in enumerate(c1_arr):
             p = DEFAULT_PARAMS.copy()
+            if sys_params:
+                p.update(dict(sys_params))
             p.update({'c1': float(c1), 'q1': float(q1)})
             state = {k: np.float128(v) for k, v in FULL_INIT.items()}
             sys = DynamicalSystem(p, state, "dimensionalized")
@@ -112,7 +128,7 @@ def scenario_4():
         "Focus parameter: EEZ violation intensity β ∈ [0, 1]."
     )
 
-    with st.expander("Parameters", expanded=False):
+    with st.expander("Analysis Parameters", expanded=False):
         colA, colB = st.columns(2, gap="large")
 
         with colA:
@@ -161,6 +177,8 @@ def scenario_4():
                 "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="s4_ftrng",
             )
 
+    sys_t = sys_params_ui("s4")
+
     if not s4_b_vals:
         st.warning("Select at least one *β* value.")
         return
@@ -179,20 +197,20 @@ def scenario_4():
         "Running time-series simulations (F_threshold sweep)",
         "Computing bifurcation diagram (F_threshold sweep)",
     ]):
-        ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA) for b in s4_b_vals}
+        ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
         t4_A = np.arange(s4_simA + 1)
         bb_b, bb_S, bb_E = s4_bifurcation(
             float(s4_rng[0]), float(s4_rng[1]), s4_resA, s4_bifA_iter, 0.6,
-            float(s4_ft_A),
+            float(s4_ft_A), sys_t,
         )
         ts4_ft = {
-            ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB)
+            ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
             for ft in s4_ft_vals
         }
         t4_B = np.arange(s4_simB + 1)
         bf_f, bf_S, bf_E = s4_bifurcation_ft(
             float(s4_b_hold), float(s4_ft_rng[0]), float(s4_ft_rng[1]),
-            s4_resB, s4_bifB_iter, 0.6,
+            s4_resB, s4_bifB_iter, 0.6, sys_t,
         )
 
     ep_labels = [

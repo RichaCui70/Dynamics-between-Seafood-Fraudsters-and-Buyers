@@ -6,6 +6,7 @@ from System import DynamicalSystem, DEFAULT_PARAMS
 from .constants import _PW0, _C0, _Q0, FULL_INIT
 from .plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps
 from ._status import scenario_header, status_indicator
+from ._sys_params import sys_params_ui
 
 
 _FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
@@ -15,8 +16,11 @@ _PW_HOLD_OPTIONS = [
 
 
 @st.cache_data(show_spinner=False)
-def s2_time_series(pw1_val: float, ft_val: float, sim_time: int) -> dict:
+def s2_time_series(pw1_val: float, ft_val: float, sim_time: int,
+                   sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update({'pw1': pw1_val, 'c1': _C0, 'q1': _Q0, 'F_threshold': ft_val})
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -26,12 +30,15 @@ def s2_time_series(pw1_val: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s2_bifurcation(pw_min: float, pw_max: float, resolution: int,
-                   bif_time: int, burn_frac: float, ft_val: float) -> tuple:
+                   bif_time: int, burn_frac: float, ft_val: float,
+                   sys_params: tuple = ()) -> tuple:
     pw_sweep = np.linspace(pw_min, pw_max, resolution)
     burn = int(bif_time * burn_frac)
     bp_p, bp_S, bp_E = [], [], []
     for pw in pw_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update({'pw1': float(pw), 'c1': _C0, 'q1': _Q0, 'F_threshold': ft_val})
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
@@ -46,8 +53,11 @@ def s2_bifurcation(pw_min: float, pw_max: float, resolution: int,
 
 
 @st.cache_data(show_spinner=False)
-def s2_time_series_ft(pw1_hold: float, ft_val: float, sim_time: int) -> dict:
+def s2_time_series_ft(pw1_hold: float, ft_val: float, sim_time: int,
+                      sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p.update({'pw1': pw1_hold, 'c1': _C0, 'q1': _Q0, 'F_threshold': ft_val})
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -57,12 +67,15 @@ def s2_time_series_ft(pw1_hold: float, ft_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s2_bifurcation_ft(pw1_hold: float, ft_min: float, ft_max: float,
-                      resolution: int, bif_time: int, burn_frac: float) -> tuple:
+                      resolution: int, bif_time: int, burn_frac: float,
+                      sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
     burn = int(bif_time * burn_frac)
     bf_f, bf_S, bf_E = [], [], []
     for ft in ft_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update({
             'pw1': pw1_hold, 'c1': _C0, 'q1': _Q0, 'F_threshold': float(ft),
         })
@@ -79,11 +92,14 @@ def s2_bifurcation_ft(pw1_hold: float, ft_min: float, ft_max: float,
 
 
 @st.cache_data(show_spinner=False)
-def s2_spectral_sweep(pw_min: float, pw_max: float, resolution: int) -> tuple:
+def s2_spectral_sweep(pw_min: float, pw_max: float, resolution: int,
+                      sys_params: tuple = ()) -> tuple:
     pw_vals = np.linspace(pw_min, pw_max, resolution)
     rho_vals = np.empty(resolution)
     for i, pw in enumerate(pw_vals):
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p.update({'pw1': float(pw), 'c1': _C0, 'q1': _Q0})
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
@@ -101,7 +117,7 @@ def scenario_2():
         f"Focus parameter: pw₁."
     )
 
-    with st.expander("Parameters", expanded=False):
+    with st.expander("Analysis Parameters", expanded=False):
         colA, colB = st.columns(2, gap="large")
 
         with colA:
@@ -151,6 +167,8 @@ def scenario_2():
                 "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="s2_ftrng",
             )
 
+    sys_t = sys_params_ui("s2")
+
     if not s2_pw_vals:
         st.warning("Select at least one *pw₁* value.")
         return
@@ -170,22 +188,22 @@ def scenario_2():
         "Computing bifurcation diagram (F_threshold sweep)",
         "Computing stability sweep",
     ]):
-        ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA) for pw in s2_pw_vals}
+        ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA, sys_t) for pw in s2_pw_vals}
         t2_A = np.arange(s2_simA + 1)
         bp_p, bp_S, bp_E = s2_bifurcation(
             float(s2_rng[0]), float(s2_rng[1]), s2_resA, s2_bifA_iter, 0.6,
-            float(s2_ft_A),
+            float(s2_ft_A), sys_t,
         )
         ts2_ft = {
-            ft: s2_time_series_ft(float(s2_pw_hold), float(ft), s2_simB)
+            ft: s2_time_series_ft(float(s2_pw_hold), float(ft), s2_simB, sys_t)
             for ft in s2_ft_vals
         }
         t2_B = np.arange(s2_simB + 1)
         bf_f, bf_S, bf_E = s2_bifurcation_ft(
             float(s2_pw_hold), float(s2_ft_rng[0]), float(s2_ft_rng[1]),
-            s2_resB, s2_bifB_iter, 0.6,
+            s2_resB, s2_bifB_iter, 0.6, sys_t,
         )
-        s2_pw_sweep, s2_rho = s2_spectral_sweep(0.05, 5.0, 100)
+        s2_pw_sweep, s2_rho = s2_spectral_sweep(0.05, 5.0, 100, sys_t)
 
     tab_ts, tab_bif, tab_rm, tab_stab = st.tabs(
         ["Time Series", "Bifurcation", "Poincare", "Stability"]

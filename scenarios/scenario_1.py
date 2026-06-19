@@ -6,11 +6,14 @@ from System import DynamicalSystem, DEFAULT_PARAMS
 
 from .constants import S1_COLORS, S1_NO_FRAUD
 from ._status import scenario_header, status_indicator
+from ._sys_params import sys_params_ui
 
 
 @st.cache_data(show_spinner=False)
-def s1_time_series(r_val: float, sim_time: int) -> dict:
+def s1_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
     p['r'] = r_val
     state = {k: np.float128(v) for k, v in S1_NO_FRAUD.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -20,12 +23,15 @@ def s1_time_series(r_val: float, sim_time: int) -> dict:
 
 @st.cache_data(show_spinner=False)
 def s1_bifurcation(r_min: float, r_max: float, resolution: int,
-                   bif_time: int, burn_frac: float) -> tuple:
+                   bif_time: int, burn_frac: float,
+                   sys_params: tuple = ()) -> tuple:
     r_sweep = np.linspace(r_min, r_max, resolution)
     burn = int(bif_time * burn_frac)
     br_r, br_S, br_E = [], [], []
     for rv in r_sweep:
         p = DEFAULT_PARAMS.copy()
+        if sys_params:
+            p.update(dict(sys_params))
         p['r'] = float(rv)
         state = {k: np.float128(v) for k, v in S1_NO_FRAUD.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
@@ -47,7 +53,7 @@ def scenario_1():
         "Effort (E) only. Focus parameter: intrinsic growth rate *r*."
     )
 
-    with st.expander("Parameters", expanded=False):
+    with st.expander("Analysis Parameters", expanded=False):
         _c1, _c2, _c3 = st.columns(3)
         with _c1:
             s1_sim = st.slider("Simulation length", 100, 1000, 300, 50, key="s1_sim")
@@ -62,6 +68,8 @@ def scenario_1():
             key="s1_rv",
         )
 
+    sys_t = sys_params_ui("s1")
+
     if not s1_r_vals:
         st.warning("Select at least one *r* value.")
         return
@@ -74,10 +82,10 @@ def scenario_1():
         "Running time-series simulations",
         "Computing bifurcation diagram",
     ]):
-        ts1 = {rv: s1_time_series(float(rv), s1_sim) for rv in s1_r_vals}
+        ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
         t1 = np.arange(s1_sim + 1)
         br_r, br_S, br_E = s1_bifurcation(
-            float(s1_rng[0]), float(s1_rng[1]), s1_res, 300, 0.6,
+            float(s1_rng[0]), float(s1_rng[1]), s1_res, 300, 0.6, sys_t,
         )
 
     tab_ts, tab_bif, tab_rm = st.tabs(
