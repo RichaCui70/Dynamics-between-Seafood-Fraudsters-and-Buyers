@@ -89,24 +89,24 @@ def _run_scenario_ts(
     }
 
 
-def _ts_fig(label: str, ts: dict) -> go.Figure:
-    t = list(range(len(ts['S'])))
+_VAR_COLOR = {'S': COLORS4['S'], 'H': HARVEST_COLOR, 'Pm': ECON_COLORS['Pm']}
+_VAR_LABEL = {'S': 'Seafood (S)', 'H': 'Harvest (H)', 'Pm': 'Market Price (Pᵐ)'}
+
+def _ts_fig(sc_label: str, ts: dict, var_key: str, show_title: bool) -> go.Figure:
+    t = list(range(len(ts[var_key])))
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=t, y=ts['S'],  name='S',  line=dict(color=COLORS4['S'],     width=1.5)))
-    fig.add_trace(go.Scatter(x=t, y=ts['H'],  name='H',  line=dict(color=HARVEST_COLOR,     width=1.5)))
-    fig.add_trace(go.Scatter(x=t, y=ts['Pm'], name='Pᵐ', line=dict(color=ECON_COLORS['Pm'], width=1.5)))
+    fig.add_trace(go.Scatter(
+        x=t, y=ts[var_key],
+        line=dict(color=_VAR_COLOR[var_key], width=1.5),
+        showlegend=False,
+    ))
+    top_margin = 30 if show_title else 10
     fig.update_layout(
-        title=dict(text=f"Scenario {label}", font=dict(size=13), x=0.5),
-        height=240,
-        margin=dict(l=40, r=10, t=40, b=30),
-        legend=dict(
-            orientation='h', yanchor='bottom', y=1.02,
-            xanchor='left', x=0, font=dict(size=10),
-        ),
-        xaxis=dict(title='t', showgrid=False, tickfont=dict(size=10)),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.08)', tickfont=dict(size=10)),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
+        title=dict(text=f"Scenario {sc_label}", font=dict(size=12), x=0.5) if show_title else '',
+        height=300,
+        width=400,
+        margin=dict(l=40, r=8, t=top_margin, b=25),
+        xaxis=dict(title='t', showgrid=False, tickfont=dict(size=9)),
     )
     return fig
 
@@ -221,8 +221,25 @@ def hypothesis_tab():
         margin=dict(l=80, r=80, t=100, b=40),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
+    st.markdown("---")
+    st.markdown("#### Average values (long-term, for equilibrium or limit cycle)")
+    header   = "| Scenario | Avg Harvest | Avg Market Price | Avg Seafood |"
+    sep      = "|---|---|---|---|"
+    null_row = (
+        f"| 0 (Null) | {null_avgs['Harvest']:.4f} "
+        f"| {null_avgs['Market Price']:.4f} "
+        f"| {null_avgs['Seafood']:.4f} |"
+    )
+    sc_rows = [
+        f"| {sc} | {scenario_avgs[sc]['Harvest']:.4f} "
+        f"| {scenario_avgs[sc]['Market Price']:.4f} "
+        f"| {scenario_avgs[sc]['Seafood']:.4f} |"
+        for sc in scenario_labels
+    ]
+    st.markdown("\n".join([header, sep, null_row] + sc_rows))
+    
     st.markdown("---")
     st.markdown("#### Time Series Comparison")
     st.caption(
@@ -253,31 +270,31 @@ def hypothesis_tab():
             },
         }
 
-        _MAX_PER_ROW = 4
-        for row_start in range(0, len(selected_ts), _MAX_PER_ROW):
-            chunk = selected_ts[row_start:row_start + _MAX_PER_ROW]
-            cols = st.columns(len(chunk))
-            for col, sc_label in zip(cols, chunk):
-                with col:
-                    p = _ts_params[sc_label]
-                    ts_data = _run_scenario_ts(
-                        p['F'], p['FP'], p['alpha'],
-                        r, F_threshold, p['e_d'],
-                    )
-                    st.plotly_chart(_ts_fig(sc_label, ts_data), use_container_width=True)
+        ts_cache = {
+            sc: _run_scenario_ts(
+                _ts_params[sc]['F'], _ts_params[sc]['FP'],
+                _ts_params[sc]['alpha'], r, F_threshold, _ts_params[sc]['e_d'],
+            )
+            for sc in selected_ts
+        }
 
-    with st.expander("Average values (long-term, for equilibrium or limit cycle)"):
-        header   = "| Scenario | Avg Harvest | Avg Market Price | Avg Seafood |"
-        sep      = "|---|---|---|---|"
-        null_row = (
-            f"| 0 (Null) | {null_avgs['Harvest']:.4f} "
-            f"| {null_avgs['Market Price']:.4f} "
-            f"| {null_avgs['Seafood']:.4f} |"
-        )
-        sc_rows = [
-            f"| {sc} | {scenario_avgs[sc]['Harvest']:.4f} "
-            f"| {scenario_avgs[sc]['Market Price']:.4f} "
-            f"| {scenario_avgs[sc]['Seafood']:.4f} |"
-            for sc in scenario_labels
-        ]
-        st.markdown("\n".join([header, sep, null_row] + sc_rows))
+        _PILL_TO_VAR = {'S̄': 'S', 'H̄': 'H', 'P̄ᵐ': 'Pm'}
+        _VAR_ROW_ORDER = ['S̄', 'H̄', 'P̄ᵐ']
+        active_vars = [v for v in _VAR_ROW_ORDER if v in selected]
+
+        for row_idx, pill_key in enumerate(active_vars):
+            var_key = _PILL_TO_VAR[pill_key]
+            st.markdown(
+                f"<span style='font-size:13px;font-weight:600;"
+                f"color:{_VAR_COLOR[var_key]}'>{_VAR_LABEL[var_key]}</span>",
+                unsafe_allow_html=True,
+            )
+            cols = st.columns(len(selected_ts))
+            show_title = row_idx == 0
+            for col, sc_label in zip(cols, selected_ts):
+                with col:
+                    st.plotly_chart(
+                        _ts_fig(sc_label, ts_cache[sc_label], var_key, show_title),
+                        width='content',
+                        key=f"{row_idx} - {sc_label}"
+                    )
