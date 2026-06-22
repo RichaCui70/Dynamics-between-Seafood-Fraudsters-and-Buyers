@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from System import DynamicalSystem, DEFAULT_PARAMS
 
 from .constants import _PW0, _C0, _Q0, FULL_INIT
-from .plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps
+from .plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
 
@@ -210,6 +210,10 @@ def scenario_2():
     )
 
     with tab_ts:
+        hm_metrics = st.pills(
+            "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
+            selection_mode="multi", key="s2_hm_m",
+        )
         tsA, tsB = st.tabs(["vs pw₁", "vs F_threshold"])
         with tsA:
             fig = plot_ts_with_economics(
@@ -218,6 +222,11 @@ def scenario_2():
                 f'(c₁=c₀={_C0},  q₁=q₀={_Q0},  F_threshold={s2_ft_A})',
             )
             st.plotly_chart(fig, width='stretch')
+            if hm_metrics:
+                hm = plot_ts_heatmap(ts2, s2_pw_vals, 'pw₁', hm_metrics)
+                if hm:
+                    for hm_fig in hm:
+                        st.plotly_chart(hm_fig, width='stretch')
         with tsB:
             fig = plot_ts_with_economics(
                 ts2_ft, t2_B, s2_ft_vals, 'F_threshold',
@@ -225,6 +234,11 @@ def scenario_2():
                 f'(pw₁={s2_pw_hold},  c₁=c₀={_C0},  q₁=q₀={_Q0})',
             )
             st.plotly_chart(fig, width='stretch')
+            if hm_metrics:
+                hm = plot_ts_heatmap(ts2_ft, s2_ft_vals, 'F_threshold', hm_metrics)
+                if hm:
+                    for hm_fig in hm:
+                        st.plotly_chart(hm_fig, width='stretch')
 
     with tab_bif:
         bifA, bifB = st.tabs(["vs pw₁", "vs F_threshold"])

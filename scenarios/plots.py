@@ -260,21 +260,23 @@ def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=COLORS4):
 
 
 def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6):
-    """Compact heatmap of long-run averages aligned with time series columns.
+    """Create separate heatmaps for each metric with horizontal legends.
 
-    Rows  = active subset of HEATMAP_METRICS (S̄, H̄, P̄ᵐ).
-    Cols  = param_vals in order (same as time series subplot columns).
-    Color = per-row min-max normalization; cell text = raw average.
+    Returns a list of figures, one per active metric (S̄, H̄, P̄ᵐ).
+    Each heatmap uses diverging green-white-red colorscale (low → high).
+    Columns correspond to param_vals in order.
     """
     y_order = [m for m in HEATMAP_METRICS if m in active_metrics]
     if not y_order or not param_vals:
         return None
 
     x_labels = [str(v) for v in param_vals]
-    z_vals, text_vals = [], []
-    for pill in y_order:
-        key = _HEATMAP_KEY[pill]
+    figs = []
+
+    for metric in y_order:
+        key = _HEATMAP_KEY[metric]
         row_z, row_t = [], []
+
         for pv in param_vals:
             arr = ts_dict[pv][key]
             n = len(arr)
@@ -282,43 +284,46 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
             avg = float(np.mean(arr[burn:]))
             row_z.append(avg)
             row_t.append(f"{avg:.3f}")
-        z_vals.append(row_z)
-        text_vals.append(row_t)
 
-    # Per-row min-max so each metric fills its own colour range
-    z_color = []
-    for row in z_vals:
-        lo, hi = min(row), max(row)
+        # Min-max normalization for diverging colorscale
+        lo, hi = min(row_z), max(row_z)
         rng = hi - lo if hi != lo else 1.0
-        z_color.append([(v - lo) / rng for v in row])
+        z_color = [[(v - lo) / rng for v in row_z]]
 
-    fig = go.Figure(data=go.Heatmap(
-        z=z_color,
-        x=x_labels,
-        y=y_order,
-        colorscale=[[0, '#eef3fb'], [1, '#08306b']],
-        showscale=True,
-        colorbar=dict(
-            title=dict(text="Low → High", side="right"),
-            tickformat=".0%",
-        ),
-        text=text_vals,
-        texttemplate="%{text}",
-        textfont=dict(size=12),
-        xgap=2,
-        ygap=2,
-        hovertemplate="%{y}  |  %{x} = %{text}<extra></extra>",
-    ))
+        fig = go.Figure(data=go.Heatmap(
+            z=z_color,
+            x=x_labels,
+            y=[metric],
+            colorscale=[[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']],
+            zmin=0,
+            zmax=1,
+            showscale=True,
+            colorbar=dict(
+                orientation='h',
+                y=-0.3,
+                len=0.8,
+                thickness=20,
+                tickformat=".0%",
+            ),
+            text=[row_t],
+            texttemplate="%{text}",
+            textfont=dict(size=12),
+            xgap=2,
+            ygap=2,
+            hovertemplate="%{y}  |  %{x} = %{text}<extra></extra>",
+        ))
 
-    fig.update_layout(
-        height=35 + len(y_order) * 55,
-        margin=dict(t=5, b=50, l=80, r=120),
-        yaxis=dict(autorange='reversed', tickfont=dict(size=11)),
-        xaxis=dict(
-            type='category',
-            tickfont=dict(size=11),
-            title=param_label,
-            side='bottom',
-        ),
-    )
-    return fig
+        fig.update_layout(
+            height=200,
+            margin=dict(t=10, b=100, l=60, r=60),
+            yaxis=dict(tickfont=dict(size=11)),
+            xaxis=dict(
+                type='category',
+                tickfont=dict(size=11),
+                title=param_label,
+                side='bottom',
+            ),
+        )
+        figs.append(fig)
+
+    return figs if figs else None
