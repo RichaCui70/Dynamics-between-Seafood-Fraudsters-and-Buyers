@@ -261,17 +261,24 @@ def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=COLORS4):
 
 # Seafood: negative % = red (bad), positive % = green (good)
 _CS_SEAFOOD = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
+# Harvest: negative % = red (bad), positive % = green (good)
+_CS_HARVEST = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
+# Harvest: negative % = red (bad), positive % = green (good)
+_CS_MARKET_PRICE= [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 # Harvest / Market Price: keep original blue scale
 _CS_OTHERS  = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 
 
-def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6):
+def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6, baseline_dict=None):
     """One figure per active metric, stacked below the time series.
 
-    Cell values: signed % deviation from the row mean (negative = below avg,
-    positive = above avg).  Seafood uses a red-white-green diverging scale;
-    Harvest and Market Price keep the original light-to-dark-blue scale.
-    Columns match param_vals order (same as time series subplot columns).
+    If baseline_dict is provided, cell values show % change from baseline.
+    Otherwise, shows signed % deviation from the row mean (within-scenario variation).
+
+    Cell coloring (diverging scale):
+    - Green: exceeds baseline (or row mean)
+    - White: equals baseline (or row mean)
+    - Red: falls below baseline (or row mean)
     """
     y_order = [m for m in HEATMAP_METRICS if m in active_metrics]
     if not y_order or not param_vals:
@@ -291,16 +298,33 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
             burn = int(n * burn_frac)
             avgs.append(float(np.mean(arr[burn:])))
 
-        # Signed % deviation from row mean
-        row_mean = float(np.mean(avgs)) or 1.0
-        pcts = [(v - row_mean) / abs(row_mean) * 100 for v in avgs]
+        # Calculate % change (vs baseline or vs row mean)
+        if baseline_dict and key in baseline_dict:
+            baseline_val = baseline_dict[key]
+            if baseline_val != 0:
+                pcts = [(v - baseline_val) / abs(baseline_val) * 100 for v in avgs]
+            else:
+                pcts = [0.0] * len(avgs)
+        else:
+            # Fallback: signed % deviation from row mean
+            row_mean = float(np.mean(avgs)) or 1.0
+            pcts = [(v - row_mean) / abs(row_mean) * 100 for v in avgs]
+
         text  = [f"{p:+.1f}%" for p in pcts]
 
-        # Symmetric normalisation: 0% → 0.5, most-negative → 0.0, most-positive → 1.0
+        # Symmetric normalisation around 0: -abs_max → 0.0, 0% → 0.5, +abs_max → 1.0
         abs_max = max(abs(p) for p in pcts) or 1.0
         z_norm = [(p + abs_max) / (2 * abs_max) for p in pcts]
 
-        colorscale = _CS_SEAFOOD if metric == 'S̄' else _CS_OTHERS
+        # Select colorscale based on metric
+        if metric == 'S̄':
+            colorscale = _CS_SEAFOOD
+        elif metric == 'H̄':
+            colorscale = _CS_HARVEST
+        elif metric == 'P̄ᵐ':
+            colorscale = _CS_MARKET_PRICE
+        else:
+            colorscale = _CS_OTHERS
 
         fig = go.Figure(data=go.Heatmap(
             z=[z_norm],

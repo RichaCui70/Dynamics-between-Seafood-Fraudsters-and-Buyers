@@ -108,6 +108,26 @@ def s2_spectral_sweep(pw_min: float, pw_max: float, resolution: int,
     return pw_vals.astype(np.float64), rho_vals.astype(np.float64)
 
 
+@st.cache_data(show_spinner=False)
+def s2_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Baseline: no fraud (F=0, FP=0), standard parameters."""
+    p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
+    p.update({'pw1': _PW0, 'c1': _C0, 'q1': _Q0, 'F_threshold': 0.5})
+    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state['F'] = np.float128(0.0)
+    state['FP'] = np.float128(0.0)
+    sys = DynamicalSystem(p, state, "dimensionalized")
+    ts = sys.time_series_plot(time=sim_time)
+    burn = int(sim_time * 0.6)
+    return {
+        'Seafood': float(np.mean(ts['Seafood'][burn:])),
+        'Harvest': float(np.mean(ts['Harvest'][burn:])),
+        'Market Price': float(np.mean(ts['Market Price'][burn:])),
+    }
+
+
 def scenario_2():
     status_slot = scenario_header("Scenario 2 — Prized / Protected Seafood")
     st.caption(
@@ -188,6 +208,7 @@ def scenario_2():
         with status_indicator(status_slot, [
             "Running time-series simulations (pw₁ sweep)",
             "Running time-series simulations (F_threshold sweep)",
+            "Computing baseline (no fraud)",
         ]):
             ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA, sys_t) for pw in s2_pw_vals}
             t2_A = np.arange(s2_simA + 1)
@@ -196,11 +217,13 @@ def scenario_2():
                 for ft in s2_ft_vals
             }
             t2_B = np.arange(s2_simB + 1)
+            s2_baseline_vals = s2_baseline(s2_simA, sys_t)
 
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s2_hm_m",
         )
+        st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception)")
         tsA, tsB = st.tabs(["vs pw₁", "vs F_threshold"])
         with tsA:
             fig = plot_ts_with_economics(
@@ -210,7 +233,7 @@ def scenario_2():
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts2, s2_pw_vals, 'pw₁', hm_metrics)
+                hm = plot_ts_heatmap(ts2, s2_pw_vals, 'pw₁', hm_metrics, baseline_dict=s2_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -222,7 +245,7 @@ def scenario_2():
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts2_ft, s2_ft_vals, 'F_threshold', hm_metrics)
+                hm = plot_ts_heatmap(ts2_ft, s2_ft_vals, 'F_threshold', hm_metrics, baseline_dict=s2_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')

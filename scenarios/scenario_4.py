@@ -119,6 +119,27 @@ def s4_stability_heatmap(c1_min: float, c1_max: float,
     return c1_arr.astype(np.float64), q1_arr.astype(np.float64), stable_grid
 
 
+@st.cache_data(show_spinner=False)
+def s4_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Baseline: no fraud (F=0, FP=0), standard parameters, no EEZ violation (beta=0)."""
+    p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
+    p.update(_eez_params(0.0))
+    p.update({'F_threshold': 0.5})
+    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state['F'] = np.float128(0.0)
+    state['FP'] = np.float128(0.0)
+    sys = DynamicalSystem(p, state, "dimensionalized")
+    ts = sys.time_series_plot(time=sim_time)
+    burn = int(sim_time * 0.6)
+    return {
+        'Seafood': float(np.mean(ts['Seafood'][burn:])),
+        'Harvest': float(np.mean(ts['Harvest'][burn:])),
+        'Market Price': float(np.mean(ts['Market Price'][burn:])),
+    }
+
+
 def scenario_4():
     status_slot = scenario_header("Scenario 4 — Non-Enforcement of EEZ")
     st.caption(
@@ -208,6 +229,7 @@ def scenario_4():
         with status_indicator(status_slot, [
             "Running time-series simulations (β sweep)",
             "Running time-series simulations (F_threshold sweep)",
+            "Computing baseline (no fraud, no EEZ violation)",
         ]):
             ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
             t4_A = np.arange(s4_simA + 1)
@@ -216,11 +238,13 @@ def scenario_4():
                 for ft in s4_ft_vals
             }
             t4_B = np.arange(s4_simB + 1)
+            s4_baseline_vals = s4_baseline(s4_simA, sys_t)
 
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s4_hm_m",
         )
+        st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception, no EEZ violation)")
         tsA, tsB = st.tabs(["vs β", "vs F_threshold"])
         with tsA:
             fig = plot_4var_ts(
@@ -233,7 +257,7 @@ def scenario_4():
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts4, s4_b_vals, 'β', hm_metrics)
+                hm = plot_ts_heatmap(ts4, s4_b_vals, 'β', hm_metrics, baseline_dict=s4_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -245,7 +269,7 @@ def scenario_4():
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts4_ft, s4_ft_vals, 'F_threshold', hm_metrics)
+                hm = plot_ts_heatmap(ts4_ft, s4_ft_vals, 'F_threshold', hm_metrics, baseline_dict=s4_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')

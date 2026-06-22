@@ -98,6 +98,27 @@ def s3_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
     return np.array(bf_f), np.array(bf_S), np.array(bf_E)
 
 
+@st.cache_data(show_spinner=False)
+def s3_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Baseline: no fraud (F=0, FP=0), standard parameters, no blast (alpha=0)."""
+    p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
+    p.update(_blast_params(0.0))
+    p.update({'F_threshold': 0.5})
+    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state['F'] = np.float128(0.0)
+    state['FP'] = np.float128(0.0)
+    sys = DynamicalSystem(p, state, "dimensionalized")
+    ts = sys.time_series_plot(time=sim_time)
+    burn = int(sim_time * 0.6)
+    return {
+        'Seafood': float(np.mean(ts['Seafood'][burn:])),
+        'Harvest': float(np.mean(ts['Harvest'][burn:])),
+        'Market Price': float(np.mean(ts['Market Price'][burn:])),
+    }
+
+
 def scenario_3():
     status_slot = scenario_header("Scenario 3 — Blast / Cyanide Fishing")
     st.caption(
@@ -189,6 +210,7 @@ def scenario_3():
         with status_indicator(status_slot, [
             "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
+            "Computing baseline (no fraud, no blast)",
         ]):
             ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
             t3_A = np.arange(s3_simA + 1)
@@ -197,11 +219,13 @@ def scenario_3():
                 for ft in s3_ft_vals
             }
             t3_B = np.arange(s3_simB + 1)
+            s3_baseline_vals = s3_baseline(s3_simA, sys_t)
 
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s3_hm_m",
         )
+        st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception, no blast)")
         tsA, tsB = st.tabs(["vs α", "vs F_threshold"])
         with tsA:
             fig = plot_ts_with_economics(
@@ -213,7 +237,7 @@ def scenario_3():
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts3, s3_a_vals, 'α', hm_metrics)
+                hm = plot_ts_heatmap(ts3, s3_a_vals, 'α', hm_metrics, baseline_dict=s3_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -225,7 +249,7 @@ def scenario_3():
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts3_ft, s3_ft_vals, 'F_threshold', hm_metrics)
+                hm = plot_ts_heatmap(ts3_ft, s3_ft_vals, 'F_threshold', hm_metrics, baseline_dict=s3_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
