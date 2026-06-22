@@ -119,7 +119,6 @@ def s4_stability_heatmap(c1_min: float, c1_max: float,
     return c1_arr.astype(np.float64), q1_arr.astype(np.float64), stable_grid
 
 
-@st.fragment
 def scenario_4():
     status_slot = scenario_header("Scenario 4 — Non-Enforcement of EEZ")
     st.caption(
@@ -191,28 +190,6 @@ def scenario_4():
     _burnA = int(s4_simA * 0.6)
     _burnB = int(s4_simB * 0.6)
 
-    with status_indicator(status_slot, [
-        "Running time-series simulations (β sweep)",
-        "Computing bifurcation diagram (β sweep)",
-        "Running time-series simulations (F_threshold sweep)",
-        "Computing bifurcation diagram (F_threshold sweep)",
-    ]):
-        ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
-        t4_A = np.arange(s4_simA + 1)
-        bb_b, bb_S, bb_E = s4_bifurcation(
-            float(s4_rng[0]), float(s4_rng[1]), s4_resA, s4_bifA_iter, 0.6,
-            float(s4_ft_A), sys_t,
-        )
-        ts4_ft = {
-            ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
-            for ft in s4_ft_vals
-        }
-        t4_B = np.arange(s4_simB + 1)
-        bf_f, bf_S, bf_E = s4_bifurcation_ft(
-            float(s4_b_hold), float(s4_ft_rng[0]), float(s4_ft_rng[1]),
-            s4_resB, s4_bifB_iter, 0.6, sys_t,
-        )
-
     ep_labels = [
         f'β={b}  (q₁={_eez_params(b)["q1"]:.2f}, c₁={_eez_params(b)["c1"]:.2f})'
         for b in s4_b_vals
@@ -228,6 +205,18 @@ def scenario_4():
     )
 
     with tab_ts:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (β sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
+            t4_A = np.arange(s4_simA + 1)
+            ts4_ft = {
+                ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
+                for ft in s4_ft_vals
+            }
+            t4_B = np.arange(s4_simB + 1)
+
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s4_hm_m",
@@ -262,6 +251,19 @@ def scenario_4():
                         st.plotly_chart(hm_fig, width='stretch')
 
     with tab_bif:
+        with status_indicator(status_slot, [
+            "Computing bifurcation diagram (β sweep)",
+            "Computing bifurcation diagram (F_threshold sweep)",
+        ]):
+            bb_b, bb_S, bb_E = s4_bifurcation(
+                float(s4_rng[0]), float(s4_rng[1]), s4_resA, s4_bifA_iter, 0.6,
+                float(s4_ft_A), sys_t,
+            )
+            bf_f, bf_S, bf_E = s4_bifurcation_ft(
+                float(s4_b_hold), float(s4_ft_rng[0]), float(s4_ft_rng[1]),
+                s4_resB, s4_bifB_iter, 0.6, sys_t,
+            )
+
         bifA, bifB = st.tabs(["vs β", "vs F_threshold"])
         with bifA:
             fig = plot_bifurcation(
@@ -280,6 +282,16 @@ def scenario_4():
             st.plotly_chart(fig, width='stretch')
 
     with tab_rm:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (β sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
+            ts4_ft = {
+                ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
+                for ft in s4_ft_vals
+            }
+
         rmA, rmB = st.tabs(["vs β", "vs F_threshold"])
         with rmA:
             fig = plot_return_maps(ts4, s4_b_vals, 'β', _burnA)

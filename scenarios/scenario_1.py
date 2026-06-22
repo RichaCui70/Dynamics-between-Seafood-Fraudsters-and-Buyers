@@ -45,7 +45,6 @@ def s1_bifurcation(r_min: float, r_max: float, resolution: int,
     return np.array(br_r), np.array(br_S), np.array(br_E)
 
 
-@st.fragment
 def scenario_1():
     status_slot = scenario_header("Scenario 1 — Baseline Bioeconomic Model (No Fraud)")
     st.caption(
@@ -78,21 +77,15 @@ def scenario_1():
     _N = len(s1_r_vals)
     _burn = int(s1_sim * 0.6)
 
-    with status_indicator(status_slot, [
-        "Running time-series simulations",
-        "Computing bifurcation diagram",
-    ]):
-        ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
-        t1 = np.arange(s1_sim + 1)
-        br_r, br_S, br_E = s1_bifurcation(
-            float(s1_rng[0]), float(s1_rng[1]), s1_res, 300, 0.6, sys_t,
-        )
-
     tab_ts, tab_bif, tab_rm = st.tabs(
         ["Time Series", "Bifurcation", "Poincare"]
     )
 
     with tab_ts:
+        with status_indicator(status_slot, ["Running time-series simulations"]):
+            ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
+            t1 = np.arange(s1_sim + 1)
+
         fig = make_subplots(
             rows=2, cols=_N,
             subplot_titles=[f'r = {rv}' for rv in s1_r_vals] + [''] * _N,
@@ -124,6 +117,11 @@ def scenario_1():
         st.plotly_chart(fig, width='stretch')
 
     with tab_bif:
+        with status_indicator(status_slot, ["Computing bifurcation diagram"]):
+            br_r, br_S, br_E = s1_bifurcation(
+                float(s1_rng[0]), float(s1_rng[1]), s1_res, 300, 0.6, sys_t,
+            )
+
         fig = make_subplots(
             rows=1, cols=2,
             subplot_titles=['Seafood S*', 'Effort E*'],
@@ -155,6 +153,9 @@ def scenario_1():
         st.plotly_chart(fig, width='stretch')
 
     with tab_rm:
+        with status_indicator(status_slot, ["Running time-series simulations"]):
+            ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
+
         fig = make_subplots(
             rows=2, cols=_N,
             subplot_titles=[f'r = {rv}' for rv in s1_r_vals] + [''] * _N,

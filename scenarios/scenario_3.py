@@ -98,7 +98,6 @@ def s3_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
     return np.array(bf_f), np.array(bf_S), np.array(bf_E)
 
 
-@st.fragment
 def scenario_3():
     status_slot = scenario_header("Scenario 3 — Blast / Cyanide Fishing")
     st.caption(
@@ -169,28 +168,6 @@ def scenario_3():
     _burnA = int(s3_simA * 0.6)
     _burnB = int(s3_simB * 0.6)
 
-    with status_indicator(status_slot, [
-        "Running time-series simulations (α sweep)",
-        "Computing bifurcation diagram (α sweep)",
-        "Running time-series simulations (F_threshold sweep)",
-        "Computing bifurcation diagram (F_threshold sweep)",
-    ]):
-        ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
-        t3_A = np.arange(s3_simA + 1)
-        ba_a, ba_S, ba_E = s3_bifurcation(
-            float(s3_rng[0]), float(s3_rng[1]), s3_resA, s3_bifA_iter, 0.6,
-            float(s3_ft_A), sys_t,
-        )
-        ts3_ft = {
-            ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
-            for ft in s3_ft_vals
-        }
-        t3_B = np.arange(s3_simB + 1)
-        bf_f, bf_S, bf_E = s3_bifurcation_ft(
-            float(s3_a_hold), float(s3_ft_rng[0]), float(s3_ft_rng[1]),
-            s3_resB, s3_bifB_iter, 0.6, sys_t,
-        )
-
     bp_labels = [
         f'α={a}  (q₁={_blast_params(a)["q1"]:.2f}, '
         f'pw₁={_blast_params(a)["pw1"]:.2f}, '
@@ -209,6 +186,18 @@ def scenario_3():
     )
 
     with tab_ts:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (α sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
+            t3_A = np.arange(s3_simA + 1)
+            ts3_ft = {
+                ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
+                for ft in s3_ft_vals
+            }
+            t3_B = np.arange(s3_simB + 1)
+
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s3_hm_m",
@@ -242,6 +231,19 @@ def scenario_3():
                         st.plotly_chart(hm_fig, width='stretch')
 
     with tab_bif:
+        with status_indicator(status_slot, [
+            "Computing bifurcation diagram (α sweep)",
+            "Computing bifurcation diagram (F_threshold sweep)",
+        ]):
+            ba_a, ba_S, ba_E = s3_bifurcation(
+                float(s3_rng[0]), float(s3_rng[1]), s3_resA, s3_bifA_iter, 0.6,
+                float(s3_ft_A), sys_t,
+            )
+            bf_f, bf_S, bf_E = s3_bifurcation_ft(
+                float(s3_a_hold), float(s3_ft_rng[0]), float(s3_ft_rng[1]),
+                s3_resB, s3_bifB_iter, 0.6, sys_t,
+            )
+
         bifA, bifB = st.tabs(["vs α", "vs F_threshold"])
         with bifA:
             fig = plot_bifurcation(
@@ -260,6 +262,16 @@ def scenario_3():
             st.plotly_chart(fig, width='stretch')
 
     with tab_rm:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (α sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
+            ts3_ft = {
+                ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
+                for ft in s3_ft_vals
+            }
+
         rmA, rmB = st.tabs(["vs α", "vs F_threshold"])
         with rmA:
             fig = plot_return_maps(ts3, s3_a_vals, 'α', _burnA)

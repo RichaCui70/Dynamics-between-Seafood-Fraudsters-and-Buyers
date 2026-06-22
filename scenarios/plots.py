@@ -259,12 +259,19 @@ def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=COLORS4):
     return fig
 
 
-def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6):
-    """Create separate heatmaps for each metric with horizontal legends.
+# Seafood: negative % = red (bad), positive % = green (good)
+_CS_SEAFOOD = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
+# Harvest / Market Price: keep original blue scale
+_CS_OTHERS  = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 
-    Returns a list of figures, one per active metric (S̄, H̄, P̄ᵐ).
-    Each heatmap uses diverging green-white-red colorscale (low → high).
-    Columns correspond to param_vals in order.
+
+def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6):
+    """One figure per active metric, stacked below the time series.
+
+    Cell values: signed % deviation from the row mean (negative = below avg,
+    positive = above avg).  Seafood uses a red-white-green diverging scale;
+    Harvest and Market Price keep the original light-to-dark-blue scale.
+    Columns match param_vals order (same as time series subplot columns).
     """
     y_order = [m for m in HEATMAP_METRICS if m in active_metrics]
     if not y_order or not param_vals:
@@ -275,37 +282,35 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
 
     for metric in y_order:
         key = _HEATMAP_KEY[metric]
-        row_z, row_t = [], []
 
+        # Post-burn averages
+        avgs = []
         for pv in param_vals:
             arr = ts_dict[pv][key]
             n = len(arr)
             burn = int(n * burn_frac)
-            avg = float(np.mean(arr[burn:]))
-            row_z.append(avg)
-            row_t.append(f"{avg:.3f}")
+            avgs.append(float(np.mean(arr[burn:])))
 
-        # Min-max normalization for diverging colorscale
-        lo, hi = min(row_z), max(row_z)
-        rng = hi - lo if hi != lo else 1.0
-        z_color = [[(v - lo) / rng for v in row_z]]
+        # Signed % deviation from row mean
+        row_mean = float(np.mean(avgs)) or 1.0
+        pcts = [(v - row_mean) / abs(row_mean) * 100 for v in avgs]
+        text  = [f"{p:+.1f}%" for p in pcts]
+
+        # Symmetric normalisation: 0% → 0.5, most-negative → 0.0, most-positive → 1.0
+        abs_max = max(abs(p) for p in pcts) or 1.0
+        z_norm = [(p + abs_max) / (2 * abs_max) for p in pcts]
+
+        colorscale = _CS_SEAFOOD if metric == 'S̄' else _CS_OTHERS
 
         fig = go.Figure(data=go.Heatmap(
-            z=z_color,
+            z=[z_norm],
             x=x_labels,
             y=[metric],
-            colorscale=[[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']],
+            colorscale=colorscale,
             zmin=0,
             zmax=1,
-            showscale=True,
-            colorbar=dict(
-                orientation='h',
-                y=-0.3,
-                len=0.8,
-                thickness=20,
-                tickformat=".0%",
-            ),
-            text=[row_t],
+            showscale=False,
+            text=[text],
             texttemplate="%{text}",
             textfont=dict(size=12),
             xgap=2,
@@ -314,8 +319,8 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
         ))
 
         fig.update_layout(
-            height=200,
-            margin=dict(t=10, b=100, l=60, r=60),
+            height=120,
+            margin=dict(t=5, b=50, l=80, r=80),
             yaxis=dict(tickfont=dict(size=11)),
             xaxis=dict(
                 type='category',

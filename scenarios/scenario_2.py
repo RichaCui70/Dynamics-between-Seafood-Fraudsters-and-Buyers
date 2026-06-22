@@ -108,7 +108,6 @@ def s2_spectral_sweep(pw_min: float, pw_max: float, resolution: int,
     return pw_vals.astype(np.float64), rho_vals.astype(np.float64)
 
 
-@st.fragment
 def scenario_2():
     status_slot = scenario_header("Scenario 2 — Prized / Protected Seafood")
     st.caption(
@@ -181,35 +180,23 @@ def scenario_2():
     _burnA = int(s2_simA * 0.6)
     _burnB = int(s2_simB * 0.6)
 
-    with status_indicator(status_slot, [
-        "Running time-series simulations (pw₁ sweep)",
-        "Computing bifurcation diagram (pw₁ sweep)",
-        "Running time-series simulations (F_threshold sweep)",
-        "Computing bifurcation diagram (F_threshold sweep)",
-        "Computing stability sweep",
-    ]):
-        ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA, sys_t) for pw in s2_pw_vals}
-        t2_A = np.arange(s2_simA + 1)
-        bp_p, bp_S, bp_E = s2_bifurcation(
-            float(s2_rng[0]), float(s2_rng[1]), s2_resA, s2_bifA_iter, 0.6,
-            float(s2_ft_A), sys_t,
-        )
-        ts2_ft = {
-            ft: s2_time_series_ft(float(s2_pw_hold), float(ft), s2_simB, sys_t)
-            for ft in s2_ft_vals
-        }
-        t2_B = np.arange(s2_simB + 1)
-        bf_f, bf_S, bf_E = s2_bifurcation_ft(
-            float(s2_pw_hold), float(s2_ft_rng[0]), float(s2_ft_rng[1]),
-            s2_resB, s2_bifB_iter, 0.6, sys_t,
-        )
-        s2_pw_sweep, s2_rho = s2_spectral_sweep(0.05, 5.0, 100, sys_t)
-
     tab_ts, tab_bif, tab_rm, tab_stab = st.tabs(
         ["Time Series", "Bifurcation", "Poincare", "Stability"]
     )
 
     with tab_ts:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (pw₁ sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA, sys_t) for pw in s2_pw_vals}
+            t2_A = np.arange(s2_simA + 1)
+            ts2_ft = {
+                ft: s2_time_series_ft(float(s2_pw_hold), float(ft), s2_simB, sys_t)
+                for ft in s2_ft_vals
+            }
+            t2_B = np.arange(s2_simB + 1)
+
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="s2_hm_m",
@@ -241,6 +228,19 @@ def scenario_2():
                         st.plotly_chart(hm_fig, width='stretch')
 
     with tab_bif:
+        with status_indicator(status_slot, [
+            "Computing bifurcation diagram (pw₁ sweep)",
+            "Computing bifurcation diagram (F_threshold sweep)",
+        ]):
+            bp_p, bp_S, bp_E = s2_bifurcation(
+                float(s2_rng[0]), float(s2_rng[1]), s2_resA, s2_bifA_iter, 0.6,
+                float(s2_ft_A), sys_t,
+            )
+            bf_f, bf_S, bf_E = s2_bifurcation_ft(
+                float(s2_pw_hold), float(s2_ft_rng[0]), float(s2_ft_rng[1]),
+                s2_resB, s2_bifB_iter, 0.6, sys_t,
+            )
+
         bifA, bifB = st.tabs(["vs pw₁", "vs F_threshold"])
         with bifA:
             fig = plot_bifurcation(
@@ -259,6 +259,16 @@ def scenario_2():
             st.plotly_chart(fig, width='stretch')
 
     with tab_rm:
+        with status_indicator(status_slot, [
+            "Running time-series simulations (pw₁ sweep)",
+            "Running time-series simulations (F_threshold sweep)",
+        ]):
+            ts2 = {pw: s2_time_series(float(pw), float(s2_ft_A), s2_simA, sys_t) for pw in s2_pw_vals}
+            ts2_ft = {
+                ft: s2_time_series_ft(float(s2_pw_hold), float(ft), s2_simB, sys_t)
+                for ft in s2_ft_vals
+            }
+
         rmA, rmB = st.tabs(["vs pw₁", "vs F_threshold"])
         with rmA:
             fig = plot_return_maps(ts2, s2_pw_vals, 'pw₁', _burnA)
@@ -268,6 +278,9 @@ def scenario_2():
             st.plotly_chart(fig, width='stretch')
 
     with tab_stab:
+        with status_indicator(status_slot, ["Computing stability sweep"]):
+            s2_pw_sweep, s2_rho = s2_spectral_sweep(0.05, 5.0, 100, sys_t)
+
         finite = np.isfinite(s2_rho)
         pw_fin, rho_fin = s2_pw_sweep[finite], s2_rho[finite]
         stable_mask = rho_fin < 1.0
