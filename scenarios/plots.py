@@ -317,9 +317,8 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
 
         text  = [f"{p:+.1f}%" for p in pcts]
 
-        # Symmetric normalisation around 0: -abs_max → 0.0, 0% → 0.5, +abs_max → 1.0
-        abs_max = max(abs(p) for p in pcts) or 1.0
-        z_norm = [(p + abs_max) / (2 * abs_max) for p in pcts]
+        # Fixed ±100% scale: -100% → 0.0, 0% → 0.5, +100% → 1.0; clamp beyond ±100%
+        z_norm = [max(0.0, min(1.0, (p + 100) / 200)) for p in pcts]
 
         # Select colorscale based on metric
         if metric == 'S̄':
