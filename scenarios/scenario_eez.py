@@ -10,23 +10,23 @@ from ._sys_params import sys_params_ui
 
 
 _FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
-_BETA_HOLD_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
+_ALPHA_HOLD_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
 
 
-def _eez_params(beta: float) -> dict:
+def _eez_params(alpha: float) -> dict:
     return {
-        'q1': float(_Q0 + beta * 0.23),
-        'c1': float(_C0 + beta * 1.10),
+        'q1': float(_Q0 + alpha * 0.23),
+        'c1': float(_C0 + alpha * 1.10),
     }
 
 
 @st.cache_data(show_spinner=False)
-def s4_time_series(beta_val: float, ft_val: float, sim_time: int,
-                   sys_params: tuple = ()) -> dict:
+def eez_time_series(alpha_val: float, ft_val: float, sim_time: int,
+                    sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
     if sys_params:
         p.update(dict(sys_params))
-    p.update(_eez_params(beta_val))
+    p.update(_eez_params(alpha_val))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -35,17 +35,17 @@ def s4_time_series(beta_val: float, ft_val: float, sim_time: int,
 
 
 @st.cache_data(show_spinner=False)
-def s4_bifurcation(b_min: float, b_max: float, resolution: int,
-                   bif_time: int, burn_frac: float, ft_val: float,
-                   sys_params: tuple = ()) -> tuple:
-    b_sweep = np.linspace(b_min, b_max, resolution)
+def eez_bifurcation(a_min: float, a_max: float, resolution: int,
+                    bif_time: int, burn_frac: float, ft_val: float,
+                    sys_params: tuple = ()) -> tuple:
+    a_sweep = np.linspace(a_min, a_max, resolution)
     burn = int(bif_time * burn_frac)
-    bb_b, bb_S, bb_E = [], [], []
-    for bv in b_sweep:
+    ba_a, ba_S, ba_E = [], [], []
+    for av in a_sweep:
         p = DEFAULT_PARAMS.copy()
         if sys_params:
             p.update(dict(sys_params))
-        p.update(_eez_params(float(bv)))
+        p.update(_eez_params(float(av)))
         p['F_threshold'] = ft_val
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
@@ -53,19 +53,19 @@ def s4_bifurcation(b_min: float, b_max: float, resolution: int,
         s_att = ts['Seafood'][burn:].astype(np.float64)
         e_att = ts['Effort'][burn:].astype(np.float64)
         n = len(s_att)
-        bb_b.extend([float(bv)] * n)
-        bb_S.extend(s_att.tolist())
-        bb_E.extend(e_att.tolist())
-    return np.array(bb_b), np.array(bb_S), np.array(bb_E)
+        ba_a.extend([float(av)] * n)
+        ba_S.extend(s_att.tolist())
+        ba_E.extend(e_att.tolist())
+    return np.array(ba_a), np.array(ba_S), np.array(ba_E)
 
 
 @st.cache_data(show_spinner=False)
-def s4_time_series_ft(beta_hold: float, ft_val: float, sim_time: int,
-                      sys_params: tuple = ()) -> dict:
+def eez_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
+                       sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
     if sys_params:
         p.update(dict(sys_params))
-    p.update(_eez_params(beta_hold))
+    p.update(_eez_params(alpha_hold))
     p['F_threshold'] = ft_val
     state = {k: np.float128(v) for k, v in FULL_INIT.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -74,9 +74,9 @@ def s4_time_series_ft(beta_hold: float, ft_val: float, sim_time: int,
 
 
 @st.cache_data(show_spinner=False)
-def s4_bifurcation_ft(beta_hold: float, ft_min: float, ft_max: float,
-                      resolution: int, bif_time: int, burn_frac: float,
-                      sys_params: tuple = ()) -> tuple:
+def eez_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
+                       resolution: int, bif_time: int, burn_frac: float,
+                       sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
     burn = int(bif_time * burn_frac)
     bf_f, bf_S, bf_E = [], [], []
@@ -84,7 +84,7 @@ def s4_bifurcation_ft(beta_hold: float, ft_min: float, ft_max: float,
         p = DEFAULT_PARAMS.copy()
         if sys_params:
             p.update(dict(sys_params))
-        p.update(_eez_params(beta_hold))
+        p.update(_eez_params(alpha_hold))
         p['F_threshold'] = float(ft)
         state = {k: np.float128(v) for k, v in FULL_INIT.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
@@ -99,10 +99,10 @@ def s4_bifurcation_ft(beta_hold: float, ft_min: float, ft_max: float,
 
 
 @st.cache_data(show_spinner=False)
-def s4_stability_heatmap(c1_min: float, c1_max: float,
-                         q1_min: float, q1_max: float,
-                         resolution: int,
-                         sys_params: tuple = ()) -> tuple:
+def eez_stability_heatmap(c1_min: float, c1_max: float,
+                          q1_min: float, q1_max: float,
+                          resolution: int,
+                          sys_params: tuple = ()) -> tuple:
     c1_arr = np.linspace(c1_min, c1_max, resolution)
     q1_arr = np.linspace(q1_min, q1_max, resolution)
     stable_grid = np.full((resolution, resolution), np.nan)
@@ -120,8 +120,8 @@ def s4_stability_heatmap(c1_min: float, c1_max: float,
 
 
 @st.cache_data(show_spinner=False)
-def s4_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
-    """Baseline: no fraud (F=0, FP=0), standard parameters, no EEZ violation (beta=0)."""
+def eez_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Baseline: no fraud (F=0, FP=0), standard parameters, no EEZ violation (alpha=0)."""
     p = DEFAULT_PARAMS.copy()
     if sys_params:
         p.update(dict(sys_params))
@@ -140,85 +140,101 @@ def s4_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
     }
 
 
-def scenario_4():
-    status_slot = scenario_header("Scenario 4 — Non-Enforcement of EEZ")
+@st.cache_data(show_spinner=False)
+def eez_baseline_ts(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Full time series at alpha=0, F=0, FP=0 for the fixed baseline column."""
+    p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
+    p.update(_eez_params(0.0))
+    p.update({'F_threshold': 0.5})
+    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state['F'] = np.float128(0.0)
+    state['FP'] = np.float128(0.0)
+    sys = DynamicalSystem(p, state, "dimensionalized")
+    ts = sys.time_series_plot(time=sim_time)
+    return {k: v.astype(np.float64) for k, v in ts.items()}
+
+
+def scenario_eez():
+    status_slot = scenario_header("Scenario 3 — Non-Enforcement of EEZ")
     st.caption(
         "Fishers access outside-EEZ waters: q₁↑ (more fish), c₁↑ (higher cost). "
         f"pw₁ stays at default ({DEFAULT_PARAMS['pw1']}). "
-        "Focus parameter: EEZ violation intensity β ∈ [0, 1]."
+        "Focus parameter: EEZ violation intensity α ∈ [0, 1]."
     )
 
     with st.expander("Analysis Parameters", expanded=False):
         colA, colB = st.columns(2, gap="large")
 
         with colA:
-            st.markdown("#### vs β")
+            st.markdown("#### vs α")
             st.markdown("**Time Series & Poincare**")
-            s4_simA = st.slider("Time period", 100, 1000, 400, 50, key="s4_simA")
-            s4_b_vals = st.multiselect(
-                "β values", _BETA_HOLD_OPTIONS,
-                default=[0.15, 0.40, 0.70, 1.00], key="s4_bv",
+            eez_simA = st.slider("Time period", 100, 1000, 400, 50, key="eez_simA")
+            eez_a_vals = st.multiselect(
+                "α values", _ALPHA_HOLD_OPTIONS,
+                default=[0.15, 0.40, 0.70, 1.00], key="eez_av",
             )
-            s4_ft_A = st.selectbox(
+            eez_ft_A = st.selectbox(
                 "F_threshold", _FT_OPTIONS,
-                index=_FT_OPTIONS.index(0.5), key="s4_ftA",
+                index=_FT_OPTIONS.index(0.5), key="eez_ftA",
             )
             st.markdown("**Bifurcation**")
-            s4_bifA_iter = st.slider(
-                "Iteration length", 100, 1000, 300, 50, key="s4_bifA_iter",
+            eez_bifA_iter = st.slider(
+                "Iteration length", 100, 1000, 300, 50, key="eez_bifA_iter",
             )
-            s4_resA = st.slider(
-                "Resolution", 50, 500, 200, 50, key="s4_resA",
+            eez_resA = st.slider(
+                "Resolution", 50, 500, 200, 50, key="eez_resA",
             )
-            s4_rng = st.slider(
-                "β range", 0.0, 1.0, (0.0, 1.0), 0.05, key="s4_rng",
+            eez_rng = st.slider(
+                "α range", 0.0, 1.0, (0.0, 1.0), 0.05, key="eez_rng",
             )
 
         with colB:
             st.markdown("#### vs F_threshold")
             st.markdown("**Time Series & Poincare**")
-            s4_simB = st.slider("Time period", 100, 1000, 400, 50, key="s4_simB")
-            s4_ft_vals = st.multiselect(
+            eez_simB = st.slider("Time period", 100, 1000, 400, 50, key="eez_simB")
+            eez_ft_vals = st.multiselect(
                 "F_threshold values", _FT_OPTIONS,
-                default=[0.25, 0.5, 0.75, 0.95], key="s4_ftv",
+                default=[0.25, 0.5, 0.75, 0.95], key="eez_ftv",
             )
-            s4_b_hold = st.selectbox(
-                "β (held)", _BETA_HOLD_OPTIONS,
-                index=_BETA_HOLD_OPTIONS.index(0.55), key="s4_bhold",
+            eez_a_hold = st.selectbox(
+                "α (held)", _ALPHA_HOLD_OPTIONS,
+                index=_ALPHA_HOLD_OPTIONS.index(0.55), key="eez_ahold",
             )
             st.markdown("**Bifurcation**")
-            s4_bifB_iter = st.slider(
-                "Iteration length", 100, 1000, 300, 50, key="s4_bifB_iter",
+            eez_bifB_iter = st.slider(
+                "Iteration length", 100, 1000, 300, 50, key="eez_bifB_iter",
             )
-            s4_resB = st.slider(
-                "Resolution", 50, 500, 200, 50, key="s4_resB",
+            eez_resB = st.slider(
+                "Resolution", 50, 500, 200, 50, key="eez_resB",
             )
-            s4_ft_rng = st.slider(
-                "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="s4_ftrng",
+            eez_ft_rng = st.slider(
+                "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="eez_ftrng",
             )
 
-    sys_t = sys_params_ui("s4")
+    sys_t = sys_params_ui("eez", exclude={'q1', 'c1'})
 
-    if not s4_b_vals:
-        st.warning("Select at least one *β* value.")
+    if not eez_a_vals:
+        st.warning("Select at least one *α* value.")
         return
-    if not s4_ft_vals:
+    if not eez_ft_vals:
         st.warning("Select at least one *F_threshold* value.")
         return
 
-    s4_b_vals = sorted(s4_b_vals)
-    s4_ft_vals = sorted(s4_ft_vals)
-    _burnA = int(s4_simA * 0.6)
-    _burnB = int(s4_simB * 0.6)
+    eez_a_vals = sorted(eez_a_vals)
+    eez_ft_vals = sorted(eez_ft_vals)
+    _burnA = int(eez_simA * 0.6)
+    _burnB = int(eez_simB * 0.6)
 
     ep_labels = [
-        f'β={b}  (q₁={_eez_params(b)["q1"]:.2f}, c₁={_eez_params(b)["c1"]:.2f})'
-        for b in s4_b_vals
+        f'α={a}  (q₁={_eez_params(a)["q1"]:.2f}, c₁={_eez_params(a)["c1"]:.2f})'
+        for a in eez_a_vals
     ]
     hold_tag = (
-        f'β={s4_b_hold}  '
-        f'(q₁={_eez_params(s4_b_hold)["q1"]:.2f}, '
-        f'c₁={_eez_params(s4_b_hold)["c1"]:.2f})'
+        f'α={eez_a_hold}  '
+        f'(q₁={_eez_params(eez_a_hold)["q1"]:.2f}, '
+        f'c₁={_eez_params(eez_a_hold)["c1"]:.2f})'
     )
 
     tab_ts, tab_bif, tab_rm = st.tabs(
@@ -227,74 +243,78 @@ def scenario_4():
 
     with tab_ts:
         with status_indicator(status_slot, [
-            "Running time-series simulations (β sweep)",
+            "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
             "Computing baseline (no fraud, no EEZ violation)",
         ]):
-            ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
-            t4_A = np.arange(s4_simA + 1)
+            ts4 = {a: eez_time_series(float(a), float(eez_ft_A), eez_simA, sys_t) for a in eez_a_vals}
+            ts_bl = eez_baseline_ts(eez_simA, sys_t)
+            t4_A = np.arange(eez_simA + 1)
             ts4_ft = {
-                ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
-                for ft in s4_ft_vals
+                ft: eez_time_series_ft(float(eez_a_hold), float(ft), eez_simB, sys_t)
+                for ft in eez_ft_vals
             }
-            t4_B = np.arange(s4_simB + 1)
-            s4_baseline_vals = s4_baseline(s4_simA, sys_t)
+            t4_B = np.arange(eez_simB + 1)
+            eez_baseline_vals = eez_baseline(eez_simA, sys_t)
 
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
-            selection_mode="multi", key="s4_hm_m",
+            selection_mode="multi", key="eez_hm_m",
         )
         st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception, no EEZ violation)")
-        tsA, tsB = st.tabs(["vs β", "vs F_threshold"])
+        tsA, tsB = st.tabs(["vs α", "vs F_threshold"])
         with tsA:
+            _ts_full = {'Baseline': ts_bl, **ts4}
+            _vals_full = ['Baseline'] + eez_a_vals
+            _all_labels = ['Baseline (α=0, F=FP=0)'] + ep_labels
             fig = plot_4var_ts(
-                ts4, t4_A, s4_b_vals, 'β',
+                _ts_full, t4_A, _vals_full, 'α',
                 f'EEZ Non-Enforcement — Time Series by Violation Intensity   '
-                f'(F_threshold={s4_ft_A}  |  q₁↑  c₁↑  |  '
+                f'(F_threshold={eez_ft_A}  |  q₁↑  c₁↑  |  '
                 f'pw₁={DEFAULT_PARAMS["pw1"]} default)',
             )
-            for i, lbl in enumerate(ep_labels):
+            for i, lbl in enumerate(_all_labels):
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts4, s4_b_vals, 'β', hm_metrics, baseline_dict=s4_baseline_vals)
+                hm = plot_ts_heatmap(_ts_full, _vals_full, 'α', hm_metrics, baseline_dict=eez_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
         with tsB:
             fig = plot_4var_ts(
-                ts4_ft, t4_B, s4_ft_vals, 'F_threshold',
+                ts4_ft, t4_B, eez_ft_vals, 'F_threshold',
                 f'EEZ Non-Enforcement — Time Series as F_threshold Increases   '
                 f'(held {hold_tag}  |  pw₁={DEFAULT_PARAMS["pw1"]} default)',
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts4_ft, s4_ft_vals, 'F_threshold', hm_metrics, baseline_dict=s4_baseline_vals)
+                hm = plot_ts_heatmap(ts4_ft, eez_ft_vals, 'F_threshold', hm_metrics, baseline_dict=eez_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
 
     with tab_bif:
         with status_indicator(status_slot, [
-            "Computing bifurcation diagram (β sweep)",
+            "Computing bifurcation diagram (α sweep)",
             "Computing bifurcation diagram (F_threshold sweep)",
         ]):
-            bb_b, bb_S, bb_E = s4_bifurcation(
-                float(s4_rng[0]), float(s4_rng[1]), s4_resA, s4_bifA_iter, 0.6,
-                float(s4_ft_A), sys_t,
+            ba_a, ba_S, ba_E = eez_bifurcation(
+                float(eez_rng[0]), float(eez_rng[1]), eez_resA, eez_bifA_iter, 0.6,
+                float(eez_ft_A), sys_t,
             )
-            bf_f, bf_S, bf_E = s4_bifurcation_ft(
-                float(s4_b_hold), float(s4_ft_rng[0]), float(s4_ft_rng[1]),
-                s4_resB, s4_bifB_iter, 0.6, sys_t,
+            bf_f, bf_S, bf_E = eez_bifurcation_ft(
+                float(eez_a_hold), float(eez_ft_rng[0]), float(eez_ft_rng[1]),
+                eez_resB, eez_bifB_iter, 0.6, sys_t,
             )
 
-        bifA, bifB = st.tabs(["vs β", "vs F_threshold"])
+        bifA, bifB = st.tabs(["vs α", "vs F_threshold"])
         with bifA:
             fig = plot_bifurcation(
-                bb_b, bb_S, bb_E,
-                xlabel='EEZ Violation Intensity (β)',
-                title='Bifurcation over β   '
-                      f'(F_threshold={s4_ft_A}  |  β=0 → honest  |  β=1 → q₁=0.30, c₁=2.00)',
+                ba_a, ba_S, ba_E,
+                xlabel='EEZ Violation Intensity (α)',
+                title='Bifurcation over α   '
+                      f'(F_threshold={eez_ft_A}  |  α=0 → honest  |  α=1 → q₁=0.30, c₁=2.00)',
             )
             st.plotly_chart(fig, width='stretch')
         with bifB:
@@ -307,19 +327,25 @@ def scenario_4():
 
     with tab_rm:
         with status_indicator(status_slot, [
-            "Running time-series simulations (β sweep)",
+            "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
         ]):
-            ts4 = {b: s4_time_series(float(b), float(s4_ft_A), s4_simA, sys_t) for b in s4_b_vals}
+            ts4 = {a: eez_time_series(float(a), float(eez_ft_A), eez_simA, sys_t) for a in eez_a_vals}
+            ts_bl = eez_baseline_ts(eez_simA, sys_t)
             ts4_ft = {
-                ft: s4_time_series_ft(float(s4_b_hold), float(ft), s4_simB, sys_t)
-                for ft in s4_ft_vals
+                ft: eez_time_series_ft(float(eez_a_hold), float(ft), eez_simB, sys_t)
+                for ft in eez_ft_vals
             }
 
-        rmA, rmB = st.tabs(["vs β", "vs F_threshold"])
+        rmA, rmB = st.tabs(["vs α", "vs F_threshold"])
         with rmA:
-            fig = plot_return_maps(ts4, s4_b_vals, 'β', _burnA)
+            _ts_full = {'Baseline': ts_bl, **ts4}
+            _vals_full = ['Baseline'] + eez_a_vals
+            _all_labels = ['Baseline (α=0, F=FP=0)'] + ep_labels
+            fig = plot_return_maps(_ts_full, _vals_full, 'α', _burnA)
+            for i, lbl in enumerate(_all_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
         with rmB:
-            fig = plot_return_maps(ts4_ft, s4_ft_vals, 'F_threshold', _burnB)
+            fig = plot_return_maps(ts4_ft, eez_ft_vals, 'F_threshold', _burnB)
             st.plotly_chart(fig, width='stretch')

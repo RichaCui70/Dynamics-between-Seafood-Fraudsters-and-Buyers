@@ -29,7 +29,7 @@ _GROUPS = [
 ]
 
 
-def sys_params_ui(prefix: str) -> tuple:
+def sys_params_ui(prefix: str, exclude: set = frozenset()) -> tuple:
     """Render System Parameters expander; return sorted (key, val) tuple for cache keying."""
     vals = {}
     with st.expander("System Parameters", expanded=False):
@@ -38,6 +38,8 @@ def sys_params_ui(prefix: str) -> tuple:
             with col:
                 st.markdown(f"**{group_name}**")
                 for key, label, lo, hi, step in params:
+                    if key in exclude:
+                        continue
                     vals[key] = st.slider(
                         label, lo, hi, float(DEFAULT_PARAMS[key]), step,
                         key=f"{prefix}_{key}",

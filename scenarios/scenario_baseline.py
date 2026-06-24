@@ -10,7 +10,7 @@ from ._sys_params import sys_params_ui
 
 
 @st.cache_data(show_spinner=False)
-def s1_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
+def baseline_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
     if sys_params:
         p.update(dict(sys_params))
@@ -22,9 +22,9 @@ def s1_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def s1_bifurcation(r_min: float, r_max: float, resolution: int,
-                   bif_time: int, burn_frac: float,
-                   sys_params: tuple = ()) -> tuple:
+def baseline_bifurcation(r_min: float, r_max: float, resolution: int,
+                         bif_time: int, burn_frac: float,
+                         sys_params: tuple = ()) -> tuple:
     r_sweep = np.linspace(r_min, r_max, resolution)
     burn = int(bif_time * burn_frac)
     br_r, br_S, br_E = [], [], []
@@ -45,8 +45,8 @@ def s1_bifurcation(r_min: float, r_max: float, resolution: int,
     return np.array(br_r), np.array(br_S), np.array(br_E)
 
 
-def scenario_1():
-    status_slot = scenario_header("Scenario 1 — Baseline Bioeconomic Model (No Fraud)")
+def scenario_baseline():
+    status_slot = scenario_header("Baseline — Bioeconomic Model (No Fraud)")
     st.caption(
         "F = 0, FP = 0 throughout. The system reduces to Seafood (S) vs "
         "Effort (E) only. Focus parameter: intrinsic growth rate *r*."
@@ -55,27 +55,27 @@ def scenario_1():
     with st.expander("Analysis Parameters", expanded=False):
         _c1, _c2, _c3 = st.columns(3)
         with _c1:
-            s1_sim = st.slider("Simulation length", 100, 1000, 300, 50, key="s1_sim")
+            baseline_sim = st.slider("Simulation length", 100, 1000, 300, 50, key="baseline_sim")
         with _c2:
-            s1_res = st.slider("Bifurcation resolution", 50, 500, 250, 50, key="s1_res")
+            baseline_res = st.slider("Bifurcation resolution", 50, 500, 250, 50, key="baseline_res")
         with _c3:
-            s1_rng = st.slider("r sweep range", 0.1, 6.0, (0.1, 4.0), 0.1, key="s1_rng")
-        s1_r_vals = st.multiselect(
+            baseline_rng = st.slider("r sweep range", 0.1, 6.0, (0.1, 4.0), 0.1, key="baseline_rng")
+        baseline_r_vals = st.multiselect(
             "r values for time series & poincare",
             [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 3.75, 4.0, 5.0],
             default=[0.5, 1.5, 2.5, 3.75],
-            key="s1_rv",
+            key="baseline_rv",
         )
 
-    sys_t = sys_params_ui("s1")
+    sys_t = sys_params_ui("baseline")
 
-    if not s1_r_vals:
+    if not baseline_r_vals:
         st.warning("Select at least one *r* value.")
         return
 
-    s1_r_vals = sorted(s1_r_vals)
-    _N = len(s1_r_vals)
-    _burn = int(s1_sim * 0.6)
+    baseline_r_vals = sorted(baseline_r_vals)
+    _N = len(baseline_r_vals)
+    _burn = int(baseline_sim * 0.6)
 
     tab_ts, tab_bif, tab_rm = st.tabs(
         ["Time Series", "Bifurcation", "Poincare"]
@@ -83,15 +83,15 @@ def scenario_1():
 
     with tab_ts:
         with status_indicator(status_slot, ["Running time-series simulations"]):
-            ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
-            t1 = np.arange(s1_sim + 1)
+            ts1 = {rv: baseline_time_series(float(rv), baseline_sim, sys_t) for rv in baseline_r_vals}
+            t1 = np.arange(baseline_sim + 1)
 
         fig = make_subplots(
             rows=2, cols=_N,
-            subplot_titles=[f'r = {rv}' for rv in s1_r_vals] + [''] * _N,
+            subplot_titles=[f'r = {rv}' for rv in baseline_r_vals] + [''] * _N,
             shared_xaxes=True, vertical_spacing=0.10, horizontal_spacing=0.05,
         )
-        for col, rv in enumerate(s1_r_vals, 1):
+        for col, rv in enumerate(baseline_r_vals, 1):
             d = ts1[rv]
             fig.add_trace(go.Scatter(
                 x=t1, y=d['Seafood'], mode='lines',
@@ -118,8 +118,8 @@ def scenario_1():
 
     with tab_bif:
         with status_indicator(status_slot, ["Computing bifurcation diagram"]):
-            br_r, br_S, br_E = s1_bifurcation(
-                float(s1_rng[0]), float(s1_rng[1]), s1_res, 300, 0.6, sys_t,
+            br_r, br_S, br_E = baseline_bifurcation(
+                float(baseline_rng[0]), float(baseline_rng[1]), baseline_res, 300, 0.6, sys_t,
             )
 
         fig = make_subplots(
@@ -154,14 +154,14 @@ def scenario_1():
 
     with tab_rm:
         with status_indicator(status_slot, ["Running time-series simulations"]):
-            ts1 = {rv: s1_time_series(float(rv), s1_sim, sys_t) for rv in s1_r_vals}
+            ts1 = {rv: baseline_time_series(float(rv), baseline_sim, sys_t) for rv in baseline_r_vals}
 
         fig = make_subplots(
             rows=2, cols=_N,
-            subplot_titles=[f'r = {rv}' for rv in s1_r_vals] + [''] * _N,
+            subplot_titles=[f'r = {rv}' for rv in baseline_r_vals] + [''] * _N,
             vertical_spacing=0.12, horizontal_spacing=0.05,
         )
-        for col, rv in enumerate(s1_r_vals, 1):
+        for col, rv in enumerate(baseline_r_vals, 1):
             d = ts1[rv]
             for row, (var, clr) in enumerate([
                 ('Seafood', S1_COLORS['S']), ('Effort', S1_COLORS['E']),

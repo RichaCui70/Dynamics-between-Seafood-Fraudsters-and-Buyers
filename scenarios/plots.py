@@ -121,17 +121,19 @@ def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
 
 
 def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
-                           colors=COLORS4, econ_colors=ECON_COLORS):
-    """Like plot_4var_ts but with two extra rows for economic variables:
+                           colors=COLORS4, econ_colors=ECON_COLORS,
+                           show_per_effort=False):
+    """Like plot_4var_ts but with extra rows for economic variables:
     Row 1: S / E
     Row 2: F / FP
     Row 3: Market Price / Wholesale Price
-    Row 4: Revenue per Effort / Cost per Effort
+    Row 4 (optional): Revenue per Effort / Cost per Effort  [show_per_effort=True]
     """
     _N = len(param_vals)
+    n_rows = 4 if show_per_effort else 3
     fig = make_subplots(
-        rows=4, cols=_N,
-        subplot_titles=[f'{param_label} = {v}' for v in param_vals] + [''] * 3 * _N,
+        rows=n_rows, cols=_N,
+        subplot_titles=[f'{param_label} = {v}' for v in param_vals] + [''] * (n_rows - 1) * _N,
         shared_xaxes=True, vertical_spacing=0.07, horizontal_spacing=0.05,
     )
     se_max = max(
@@ -171,26 +173,29 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
             line=dict(color=econ_colors['Pw'], width=1.5),
             name='Wholesale Price (Pᵥ)', legendgroup='Pw', showlegend=show,
         ), row=3, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Revenue per Effort'], mode='lines',
-            line=dict(color=econ_colors['Rev'], width=1.5),
-            name='Revenue / Effort', legendgroup='Rev', showlegend=show,
-        ), row=4, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Cost per Effort'], mode='lines',
-            line=dict(color=econ_colors['Cost'], width=1.5),
-            name='Cost / Effort', legendgroup='Cost', showlegend=show,
-        ), row=4, col=col)
+        if show_per_effort:
+            fig.add_trace(go.Scatter(
+                x=t_arr, y=d['Revenue per Effort'], mode='lines',
+                line=dict(color=econ_colors['Rev'], width=1.5),
+                name='Revenue / Effort', legendgroup='Rev', showlegend=show,
+            ), row=4, col=col)
+            fig.add_trace(go.Scatter(
+                x=t_arr, y=d['Cost per Effort'], mode='lines',
+                line=dict(color=econ_colors['Cost'], width=1.5),
+                name='Cost / Effort', legendgroup='Cost', showlegend=show,
+            ), row=4, col=col)
 
     fig.update_yaxes(title_text='S / E', row=1, col=1)
     fig.update_yaxes(title_text='F / FP', row=2, col=1)
     fig.update_yaxes(title_text='Price', row=3, col=1)
-    fig.update_yaxes(title_text='Per-Effort', row=4, col=1)
+    if show_per_effort:
+        fig.update_yaxes(title_text='Per-Effort', row=4, col=1)
     fig.update_yaxes(rangemode='tozero')
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
-    fig.update_xaxes(title_text='Time', row=4)
+    fig.update_xaxes(title_text='Time', row=n_rows)
     fig.update_layout(
-        height=1000, title_text=title,
+        height=1000 if show_per_effort else 750,
+        title_text=title,
         title_y=1.0,
         legend=dict(orientation='h', yanchor='bottom', y=1.04),
         margin=dict(t=100, b=40),

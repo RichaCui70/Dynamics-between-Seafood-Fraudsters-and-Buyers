@@ -1,6 +1,6 @@
 import streamlit as st
 from text import INTRO
-from scenarios import scenario_1, scenario_2, scenario_3, scenario_4
+from scenarios import scenario_baseline, scenario_bf, scenario_ps, scenario_eez
 from hypothesis import hypothesis_tab
 
 st.set_page_config(
@@ -24,24 +24,24 @@ elif section == "Scenarios":
     scenario = st.segmented_control(
         "Scenario",
         [
-            "1: Baseline",
+            "Baseline",
+            "1: Blast Fishing",
             "2: Prized Seafood",
-            "3: Blast Fishing",
-            "4: EEZ"
+            "3: EEZ"
         ],
-        default="2: Prized Seafood",
+        default="Baseline",
         key="nav_scenario",
         label_visibility="collapsed",
     )
 
-    if scenario == "1: Baseline":
-        scenario_1()
+    if scenario == "Baseline":
+        scenario_baseline()
+    elif scenario == "1: Blast Fishing":
+        scenario_bf()
     elif scenario == "2: Prized Seafood":
-        scenario_2()
-    elif scenario == "3: Blast Fishing":
-        scenario_3()
-    elif scenario == "4: EEZ":
-        scenario_4()
+        scenario_ps()
+    elif scenario == "3: EEZ":
+        scenario_eez()
 
 elif section == "Hypothesis":
     hypothesis_tab()

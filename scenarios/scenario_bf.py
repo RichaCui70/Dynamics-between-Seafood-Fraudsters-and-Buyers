@@ -21,7 +21,7 @@ def _blast_params(alpha: float) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def s3_time_series(alpha_val: float, ft_val: float, sim_time: int,
+def bf_time_series(alpha_val: float, ft_val: float, sim_time: int,
                    sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
     if sys_params:
@@ -35,7 +35,7 @@ def s3_time_series(alpha_val: float, ft_val: float, sim_time: int,
 
 
 @st.cache_data(show_spinner=False)
-def s3_bifurcation(a_min: float, a_max: float, resolution: int,
+def bf_bifurcation(a_min: float, a_max: float, resolution: int,
                    bif_time: int, burn_frac: float, ft_val: float,
                    sys_params: tuple = ()) -> tuple:
     a_sweep = np.linspace(a_min, a_max, resolution)
@@ -60,7 +60,7 @@ def s3_bifurcation(a_min: float, a_max: float, resolution: int,
 
 
 @st.cache_data(show_spinner=False)
-def s3_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
+def bf_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
                       sys_params: tuple = ()) -> dict:
     p = DEFAULT_PARAMS.copy()
     if sys_params:
@@ -74,7 +74,7 @@ def s3_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
 
 
 @st.cache_data(show_spinner=False)
-def s3_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
+def bf_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
                       resolution: int, bif_time: int, burn_frac: float,
                       sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
@@ -99,7 +99,7 @@ def s3_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
 
 
 @st.cache_data(show_spinner=False)
-def s3_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+def bf_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
     """Baseline: no fraud (F=0, FP=0), standard parameters, no blast (alpha=0)."""
     p = DEFAULT_PARAMS.copy()
     if sys_params:
@@ -119,8 +119,24 @@ def s3_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
     }
 
 
-def scenario_3():
-    status_slot = scenario_header("Scenario 3 — Blast / Cyanide Fishing")
+@st.cache_data(show_spinner=False)
+def bf_baseline_ts(sim_time: int, sys_params: tuple = ()) -> dict:
+    """Full time series at alpha=0, F=0, FP=0 for the fixed baseline column."""
+    p = DEFAULT_PARAMS.copy()
+    if sys_params:
+        p.update(dict(sys_params))
+    p.update(_blast_params(0.0))
+    p.update({'F_threshold': 0.5})
+    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state['F'] = np.float128(0.0)
+    state['FP'] = np.float128(0.0)
+    sys = DynamicalSystem(p, state, "dimensionalized")
+    ts = sys.time_series_plot(time=sim_time)
+    return {k: v.astype(np.float64) for k, v in ts.items()}
+
+
+def scenario_bf():
+    status_slot = scenario_header("Scenario 1 — Blast / Cyanide Fishing")
     st.caption(
         "Destructive methods: q₁↑  pw₁↓  c₁↓↓ (cost drops much more than price). "
         "A single destruction intensity α ∈ [0, 1] jointly scales all three."
@@ -132,74 +148,74 @@ def scenario_3():
         with colA:
             st.markdown("#### vs α")
             st.markdown("**Time Series & Poincare**")
-            s3_simA = st.slider("Time period", 100, 1000, 400, 50, key="s3_simA")
-            s3_a_vals = st.multiselect(
+            bf_simA = st.slider("Time period", 100, 1000, 400, 50, key="bf_simA")
+            bf_a_vals = st.multiselect(
                 "α values", _ALPHA_HOLD_OPTIONS,
-                default=[0.15, 0.40, 0.70, 1.00], key="s3_av",
+                default=[0.15, 0.40, 0.70, 1.00], key="bf_av",
             )
-            s3_ft_A = st.selectbox(
+            bf_ft_A = st.selectbox(
                 "F_threshold", _FT_OPTIONS,
-                index=_FT_OPTIONS.index(0.5), key="s3_ftA",
+                index=_FT_OPTIONS.index(0.5), key="bf_ftA",
             )
             st.markdown("**Bifurcation**")
-            s3_bifA_iter = st.slider(
-                "Iteration length", 100, 1000, 300, 50, key="s3_bifA_iter",
+            bf_bifA_iter = st.slider(
+                "Iteration length", 100, 1000, 300, 50, key="bf_bifA_iter",
             )
-            s3_resA = st.slider(
-                "Resolution", 50, 500, 200, 50, key="s3_resA",
+            bf_resA = st.slider(
+                "Resolution", 50, 500, 200, 50, key="bf_resA",
             )
-            s3_rng = st.slider(
-                "α range", 0.0, 1.0, (0.0, 1.0), 0.05, key="s3_rng",
+            bf_rng = st.slider(
+                "α range", 0.0, 1.0, (0.0, 1.0), 0.05, key="bf_rng",
             )
 
         with colB:
             st.markdown("#### vs F_threshold")
             st.markdown("**Time Series & Poincare**")
-            s3_simB = st.slider("Time period", 100, 1000, 400, 50, key="s3_simB")
-            s3_ft_vals = st.multiselect(
+            bf_simB = st.slider("Time period", 100, 1000, 400, 50, key="bf_simB")
+            bf_ft_vals = st.multiselect(
                 "F_threshold values", _FT_OPTIONS,
-                default=[0.25, 0.5, 0.75, 0.95], key="s3_ftv",
+                default=[0.25, 0.5, 0.75, 0.95], key="bf_ftv",
             )
-            s3_a_hold = st.selectbox(
+            bf_a_hold = st.selectbox(
                 "α (held)", _ALPHA_HOLD_OPTIONS,
-                index=_ALPHA_HOLD_OPTIONS.index(0.55), key="s3_ahold",
+                index=_ALPHA_HOLD_OPTIONS.index(0.55), key="bf_ahold",
             )
             st.markdown("**Bifurcation**")
-            s3_bifB_iter = st.slider(
-                "Iteration length", 100, 1000, 300, 50, key="s3_bifB_iter",
+            bf_bifB_iter = st.slider(
+                "Iteration length", 100, 1000, 300, 50, key="bf_bifB_iter",
             )
-            s3_resB = st.slider(
-                "Resolution", 50, 500, 200, 50, key="s3_resB",
+            bf_resB = st.slider(
+                "Resolution", 50, 500, 200, 50, key="bf_resB",
             )
-            s3_ft_rng = st.slider(
-                "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="s3_ftrng",
+            bf_ft_rng = st.slider(
+                "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="bf_ftrng",
             )
 
-    sys_t = sys_params_ui("s3")
+    sys_t = sys_params_ui("bf", exclude={'q1', 'pw1', 'c1'})
 
-    if not s3_a_vals:
+    if not bf_a_vals:
         st.warning("Select at least one *α* value.")
         return
-    if not s3_ft_vals:
+    if not bf_ft_vals:
         st.warning("Select at least one *F_threshold* value.")
         return
 
-    s3_a_vals = sorted(s3_a_vals)
-    s3_ft_vals = sorted(s3_ft_vals)
-    _burnA = int(s3_simA * 0.6)
-    _burnB = int(s3_simB * 0.6)
+    bf_a_vals = sorted(bf_a_vals)
+    bf_ft_vals = sorted(bf_ft_vals)
+    _burnA = int(bf_simA * 0.6)
+    _burnB = int(bf_simB * 0.6)
 
     bp_labels = [
         f'α={a}  (q₁={_blast_params(a)["q1"]:.2f}, '
         f'pw₁={_blast_params(a)["pw1"]:.2f}, '
         f'c₁={_blast_params(a)["c1"]:.2f})'
-        for a in s3_a_vals
+        for a in bf_a_vals
     ]
     hold_tag = (
-        f'α={s3_a_hold}  '
-        f'(q₁={_blast_params(s3_a_hold)["q1"]:.2f}, '
-        f'pw₁={_blast_params(s3_a_hold)["pw1"]:.2f}, '
-        f'c₁={_blast_params(s3_a_hold)["c1"]:.2f})'
+        f'α={bf_a_hold}  '
+        f'(q₁={_blast_params(bf_a_hold)["q1"]:.2f}, '
+        f'pw₁={_blast_params(bf_a_hold)["pw1"]:.2f}, '
+        f'c₁={_blast_params(bf_a_hold)["c1"]:.2f})'
     )
 
     tab_ts, tab_bif, tab_rm = st.tabs(
@@ -212,44 +228,48 @@ def scenario_3():
             "Running time-series simulations (F_threshold sweep)",
             "Computing baseline (no fraud, no blast)",
         ]):
-            ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
-            t3_A = np.arange(s3_simA + 1)
+            ts3 = {a: bf_time_series(float(a), float(bf_ft_A), bf_simA, sys_t) for a in bf_a_vals}
+            ts_bl = bf_baseline_ts(bf_simA, sys_t)
+            t3_A = np.arange(bf_simA + 1)
             ts3_ft = {
-                ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
-                for ft in s3_ft_vals
+                ft: bf_time_series_ft(float(bf_a_hold), float(ft), bf_simB, sys_t)
+                for ft in bf_ft_vals
             }
-            t3_B = np.arange(s3_simB + 1)
-            s3_baseline_vals = s3_baseline(s3_simA, sys_t)
+            t3_B = np.arange(bf_simB + 1)
+            bf_baseline_vals = bf_baseline(bf_simA, sys_t)
 
         hm_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
-            selection_mode="multi", key="s3_hm_m",
+            selection_mode="multi", key="bf_hm_m",
         )
         st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception, no blast)")
         tsA, tsB = st.tabs(["vs α", "vs F_threshold"])
         with tsA:
+            _ts_full = {'Baseline': ts_bl, **ts3}
+            _vals_full = ['Baseline'] + bf_a_vals
+            _all_labels = ['Baseline (α=0, F=FP=0)'] + bp_labels
             fig = plot_ts_with_economics(
-                ts3, t3_A, s3_a_vals, 'α',
+                _ts_full, t3_A, _vals_full, 'α',
                 f'Blast Fishing — Time Series by Destruction Intensity   '
-                f'(F_threshold={s3_ft_A}  |  q₁↑  pw₁↓  c₁↓↓)',
+                f'(F_threshold={bf_ft_A}  |  q₁↑  pw₁↓  c₁↓↓)',
             )
-            for i, lbl in enumerate(bp_labels):
+            for i, lbl in enumerate(_all_labels):
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts3, s3_a_vals, 'α', hm_metrics, baseline_dict=s3_baseline_vals)
+                hm = plot_ts_heatmap(_ts_full, _vals_full, 'α', hm_metrics, baseline_dict=bf_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
         with tsB:
             fig = plot_ts_with_economics(
-                ts3_ft, t3_B, s3_ft_vals, 'F_threshold',
+                ts3_ft, t3_B, bf_ft_vals, 'F_threshold',
                 f'Blast Fishing — Time Series as F_threshold Increases   '
                 f'(held {hold_tag})',
             )
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts3_ft, s3_ft_vals, 'F_threshold', hm_metrics, baseline_dict=s3_baseline_vals)
+                hm = plot_ts_heatmap(ts3_ft, bf_ft_vals, 'F_threshold', hm_metrics, baseline_dict=bf_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -259,13 +279,13 @@ def scenario_3():
             "Computing bifurcation diagram (α sweep)",
             "Computing bifurcation diagram (F_threshold sweep)",
         ]):
-            ba_a, ba_S, ba_E = s3_bifurcation(
-                float(s3_rng[0]), float(s3_rng[1]), s3_resA, s3_bifA_iter, 0.6,
-                float(s3_ft_A), sys_t,
+            ba_a, ba_S, ba_E = bf_bifurcation(
+                float(bf_rng[0]), float(bf_rng[1]), bf_resA, bf_bifA_iter, 0.6,
+                float(bf_ft_A), sys_t,
             )
-            bf_f, bf_S, bf_E = s3_bifurcation_ft(
-                float(s3_a_hold), float(s3_ft_rng[0]), float(s3_ft_rng[1]),
-                s3_resB, s3_bifB_iter, 0.6, sys_t,
+            bf_f, bf_S, bf_E = bf_bifurcation_ft(
+                float(bf_a_hold), float(bf_ft_rng[0]), float(bf_ft_rng[1]),
+                bf_resB, bf_bifB_iter, 0.6, sys_t,
             )
 
         bifA, bifB = st.tabs(["vs α", "vs F_threshold"])
@@ -274,7 +294,7 @@ def scenario_3():
                 ba_a, ba_S, ba_E,
                 xlabel='Destruction Intensity (α)',
                 title='Bifurcation over α   '
-                      f'(F_threshold={s3_ft_A}  |  α=0 → honest  |  α=1 → q₁=0.40, pw₁=0.60, c₁=0.10)',
+                      f'(F_threshold={bf_ft_A}  |  α=0 → honest  |  α=1 → q₁=0.40, pw₁=0.60, c₁=0.10)',
             )
             st.plotly_chart(fig, width='stretch')
         with bifB:
@@ -290,16 +310,22 @@ def scenario_3():
             "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
         ]):
-            ts3 = {a: s3_time_series(float(a), float(s3_ft_A), s3_simA, sys_t) for a in s3_a_vals}
+            ts3 = {a: bf_time_series(float(a), float(bf_ft_A), bf_simA, sys_t) for a in bf_a_vals}
+            ts_bl = bf_baseline_ts(bf_simA, sys_t)
             ts3_ft = {
-                ft: s3_time_series_ft(float(s3_a_hold), float(ft), s3_simB, sys_t)
-                for ft in s3_ft_vals
+                ft: bf_time_series_ft(float(bf_a_hold), float(ft), bf_simB, sys_t)
+                for ft in bf_ft_vals
             }
 
         rmA, rmB = st.tabs(["vs α", "vs F_threshold"])
         with rmA:
-            fig = plot_return_maps(ts3, s3_a_vals, 'α', _burnA)
+            _ts_full = {'Baseline': ts_bl, **ts3}
+            _vals_full = ['Baseline'] + bf_a_vals
+            _all_labels = ['Baseline (α=0, F=FP=0)'] + bp_labels
+            fig = plot_return_maps(_ts_full, _vals_full, 'α', _burnA)
+            for i, lbl in enumerate(_all_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
         with rmB:
-            fig = plot_return_maps(ts3_ft, s3_ft_vals, 'F_threshold', _burnB)
+            fig = plot_return_maps(ts3_ft, bf_ft_vals, 'F_threshold', _burnB)
             st.plotly_chart(fig, width='stretch')
