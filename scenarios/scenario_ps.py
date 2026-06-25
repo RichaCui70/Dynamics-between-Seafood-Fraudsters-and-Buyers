@@ -281,14 +281,20 @@ def scenario_ps():
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
         with tsB:
+            ts_bl_B = ps_baseline_ts(ps_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts2_ft}
+            _vals_full_ft = ['Baseline'] + ps_ft_vals
+            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in ps_ft_vals]
             fig = plot_ts_with_economics(
-                ts2_ft, t2_B, ps_ft_vals, 'F_threshold',
+                _ts_full_ft, t2_B, _vals_full_ft, 'F_threshold',
                 f'Prized Seafood — Time Series as F_threshold Increases   '
                 f'(held {hold_tag},  c₁=c₀={_C0},  q₁=q₀={_Q0})',
             )
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts2_ft, ps_ft_vals, 'F_threshold', hm_metrics, baseline_dict=ps_baseline_vals)
+                hm = plot_ts_heatmap(_ts_full_ft, _vals_full_ft, 'F_threshold', hm_metrics, baseline_dict=ps_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -346,7 +352,13 @@ def scenario_ps():
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
         with rmB:
-            fig = plot_return_maps(ts2_ft, ps_ft_vals, 'F_threshold', _burnB)
+            ts_bl_B = ps_baseline_ts(ps_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts2_ft}
+            _vals_full_ft = ['Baseline'] + ps_ft_vals
+            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in ps_ft_vals]
+            fig = plot_return_maps(_ts_full_ft, _vals_full_ft, 'F_threshold', _burnB)
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
 
     with tab_stab:

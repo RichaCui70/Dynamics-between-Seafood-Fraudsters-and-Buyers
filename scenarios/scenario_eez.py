@@ -282,14 +282,20 @@ def scenario_eez():
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
         with tsB:
+            ts_bl_B = eez_baseline_ts(eez_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts4_ft}
+            _vals_full_ft = ['Baseline'] + eez_ft_vals
+            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in eez_ft_vals]
             fig = plot_4var_ts(
-                ts4_ft, t4_B, eez_ft_vals, 'F_threshold',
+                _ts_full_ft, t4_B, _vals_full_ft, 'F_threshold',
                 f'EEZ Non-Enforcement — Time Series as F_threshold Increases   '
                 f'(held {hold_tag}  |  pw₁={DEFAULT_PARAMS["pw1"]} default)',
             )
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts4_ft, eez_ft_vals, 'F_threshold', hm_metrics, baseline_dict=eez_baseline_vals)
+                hm = plot_ts_heatmap(_ts_full_ft, _vals_full_ft, 'F_threshold', hm_metrics, baseline_dict=eez_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -347,5 +353,11 @@ def scenario_eez():
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
         with rmB:
-            fig = plot_return_maps(ts4_ft, eez_ft_vals, 'F_threshold', _burnB)
+            ts_bl_B = eez_baseline_ts(eez_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts4_ft}
+            _vals_full_ft = ['Baseline'] + eez_ft_vals
+            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in eez_ft_vals]
+            fig = plot_return_maps(_ts_full_ft, _vals_full_ft, 'F_threshold', _burnB)
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')

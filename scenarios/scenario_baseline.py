@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from System import DynamicalSystem, DEFAULT_PARAMS
 
-from .constants import S1_COLORS, S1_NO_FRAUD
+from .constants import S1_COLORS, S1_NO_FRAUD, HARVEST_COLOR
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
 
@@ -99,11 +99,16 @@ def scenario_baseline():
                 name='Seafood (S)', legendgroup='S', showlegend=(col == 1),
             ), row=1, col=col)
             fig.add_trace(go.Scatter(
+                x=t1, y=d['Harvest'], mode='lines',
+                line=dict(color=HARVEST_COLOR, width=1.5),
+                name='Harvest (H)', legendgroup='H', showlegend=(col == 1),
+            ), row=1, col=col)
+            fig.add_trace(go.Scatter(
                 x=t1, y=d['Effort'], mode='lines',
                 line=dict(color=S1_COLORS['E'], width=1.5),
                 name='Effort (E)', legendgroup='E', showlegend=(col == 1),
             ), row=2, col=col)
-        fig.update_yaxes(title_text='Seafood (S)', row=1, col=1)
+        fig.update_yaxes(title_text='S / H', row=1, col=1)
         fig.update_yaxes(title_text='Effort (E)', row=2, col=1)
         fig.update_yaxes(rangemode='tozero')
         fig.update_xaxes(title_text='Time', row=2)

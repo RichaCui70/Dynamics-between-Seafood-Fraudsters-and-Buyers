@@ -262,14 +262,20 @@ def scenario_bf():
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
         with tsB:
+            ts_bl_B = bf_baseline_ts(bf_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts3_ft}
+            _vals_full_ft = ['Baseline'] + bf_ft_vals
+            _ft_labels = [f'Baseline (F=FP=0)'] + [str(ft) for ft in bf_ft_vals]
             fig = plot_ts_with_economics(
-                ts3_ft, t3_B, bf_ft_vals, 'F_threshold',
+                _ts_full_ft, t3_B, _vals_full_ft, 'F_threshold',
                 f'Blast Fishing — Time Series as F_threshold Increases   '
                 f'(held {hold_tag})',
             )
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
             if hm_metrics:
-                hm = plot_ts_heatmap(ts3_ft, bf_ft_vals, 'F_threshold', hm_metrics, baseline_dict=bf_baseline_vals)
+                hm = plot_ts_heatmap(_ts_full_ft, _vals_full_ft, 'F_threshold', hm_metrics, baseline_dict=bf_baseline_vals)
                 if hm:
                     for hm_fig in hm:
                         st.plotly_chart(hm_fig, width='stretch')
@@ -327,5 +333,11 @@ def scenario_bf():
                 fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')
         with rmB:
-            fig = plot_return_maps(ts3_ft, bf_ft_vals, 'F_threshold', _burnB)
+            ts_bl_B = bf_baseline_ts(bf_simB, sys_t)
+            _ts_full_ft = {'Baseline': ts_bl_B, **ts3_ft}
+            _vals_full_ft = ['Baseline'] + bf_ft_vals
+            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in bf_ft_vals]
+            fig = plot_return_maps(_ts_full_ft, _vals_full_ft, 'F_threshold', _burnB)
+            for i, lbl in enumerate(_ft_labels):
+                fig.layout.annotations[i].text = lbl
             st.plotly_chart(fig, width='stretch')

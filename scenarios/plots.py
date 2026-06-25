@@ -2,10 +2,12 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .constants import COLORS4, ECON_COLORS
+from .constants import COLORS4, ECON_COLORS, HARVEST_COLOR
 
 HEATMAP_METRICS = ['S̄', 'H̄', 'P̄ᵐ']
 _HEATMAP_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
+
+_LABEL_FONT = dict(color='#2c2c2c', size=18)
 
 
 def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4):
@@ -16,7 +18,8 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
         shared_xaxes=True, vertical_spacing=0.10, horizontal_spacing=0.05,
     )
     se_max = max(
-        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()))
+        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()),
+            float(ts_dict[v]['Harvest'].max()))
         for v in param_vals
     )
     for col, v in enumerate(param_vals, 1):
@@ -33,6 +36,11 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
             name='Effort (E)', legendgroup='E', showlegend=show,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
+            x=t_arr, y=d['Harvest'], mode='lines',
+            line=dict(color=HARVEST_COLOR, width=1.5),
+            name='Harvest (H)', legendgroup='H', showlegend=show,
+        ), row=1, col=col)
+        fig.add_trace(go.Scatter(
             x=t_arr, y=d['Fraudsters'], mode='lines',
             line=dict(color=colors['F'], width=1.5),
             name='Fraudsters (F)', legendgroup='F', showlegend=show,
@@ -42,15 +50,17 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
             line=dict(color=colors['FP'], width=1.5),
             name='Perception (FP)', legendgroup='FP', showlegend=show,
         ), row=2, col=col)
-    fig.update_yaxes(title_text='S / E', row=1, col=1)
-    fig.update_yaxes(title_text='F / FP', row=2, col=1)
+    fig.update_yaxes(title_text='S / E / H', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
     fig.update_yaxes(rangemode='tozero')
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
-    fig.update_xaxes(title_text='Time', row=2)
+    fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=2)
+    fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
         height=600, title_text=title,
         title_y=1.0,
-        legend=dict(orientation='h', yanchor='bottom', y=1.06),
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.06, font=dict(color='#2c2c2c', size=14)),
         margin=dict(t=100, b=40),
     )
     return fig
@@ -70,7 +80,8 @@ def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
         shared_xaxes=True, vertical_spacing=0.08, horizontal_spacing=0.05,
     )
     se_max = max(
-        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()))
+        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()),
+            float(ts_dict[v]['Harvest'].max()))
         for v in param_vals
     )
     for col, v in enumerate(param_vals, 1):
@@ -85,6 +96,11 @@ def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
             x=t_arr, y=d['Effort'], mode='lines',
             line=dict(color=colors['E'], width=1.5),
             name='Effort (E)', legendgroup='E', showlegend=show,
+        ), row=1, col=col)
+        fig.add_trace(go.Scatter(
+            x=t_arr, y=d['Harvest'], mode='lines',
+            line=dict(color=HARVEST_COLOR, width=1.5),
+            name='Harvest (H)', legendgroup='H', showlegend=show,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Fraudsters'], mode='lines',
@@ -102,19 +118,21 @@ def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
             name='FP (zoomed)', legendgroup='FPz', showlegend=show,
         ), row=3, col=col)
 
-    fig.update_yaxes(title_text='S / E', row=1, col=1)
-    fig.update_yaxes(title_text='F / FP', row=2, col=1)
-    fig.update_yaxes(title_text='FP (zoom)', range=[0, fp_ylim], row=3, col=1)
+    fig.update_yaxes(title_text='S / E / H', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
+    fig.update_yaxes(title_text='FP (zoom)', title_font=_LABEL_FONT, range=[0, fp_ylim], row=3, col=1)
     for col in range(2, _N + 1):
         fig.update_yaxes(range=[0, fp_ylim], row=3, col=col)
     fig.update_yaxes(rangemode='tozero', row=1)
     fig.update_yaxes(rangemode='tozero', row=2)
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
-    fig.update_xaxes(title_text='Time', row=3)
+    fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=3)
+    fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
         height=800, title_text=title,
         title_y=1.0,
-        legend=dict(orientation='h', yanchor='bottom', y=1.06),
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.06, font=dict(color='#2c2c2c', size=14)),
         margin=dict(t=100, b=40),
     )
     return fig
@@ -137,7 +155,8 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
         shared_xaxes=True, vertical_spacing=0.07, horizontal_spacing=0.05,
     )
     se_max = max(
-        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()))
+        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()),
+            float(ts_dict[v]['Harvest'].max()))
         for v in param_vals
     )
     for col, v in enumerate(param_vals, 1):
@@ -152,6 +171,11 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
             x=t_arr, y=d['Effort'], mode='lines',
             line=dict(color=colors['E'], width=1.5),
             name='Effort (E)', legendgroup='E', showlegend=show,
+        ), row=1, col=col)
+        fig.add_trace(go.Scatter(
+            x=t_arr, y=d['Harvest'], mode='lines',
+            line=dict(color=HARVEST_COLOR, width=1.5),
+            name='Harvest (H)', legendgroup='H', showlegend=show,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Fraudsters'], mode='lines',
@@ -175,7 +199,7 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
         ), row=3, col=col)
         if show_per_effort:
             fig.add_trace(go.Scatter(
-                x=t_arr, y=d['Revenue per Effort'], mode='lines',
+                x=t_arr, y=d['Revenue per Effofrt'], mode='lines',
                 line=dict(color=econ_colors['Rev'], width=1.5),
                 name='Revenue / Effort', legendgroup='Rev', showlegend=show,
             ), row=4, col=col)
@@ -185,19 +209,21 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
                 name='Cost / Effort', legendgroup='Cost', showlegend=show,
             ), row=4, col=col)
 
-    fig.update_yaxes(title_text='S / E', row=1, col=1)
-    fig.update_yaxes(title_text='F / FP', row=2, col=1)
-    fig.update_yaxes(title_text='Price', row=3, col=1)
+    fig.update_yaxes(title_text='S / E / H', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
+    fig.update_yaxes(title_text='Price', title_font=_LABEL_FONT, row=3, col=1)
     if show_per_effort:
-        fig.update_yaxes(title_text='Per-Effort', row=4, col=1)
+        fig.update_yaxes(title_text='Per-Effort', title_font=_LABEL_FONT, row=4, col=1)
     fig.update_yaxes(rangemode='tozero')
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
-    fig.update_xaxes(title_text='Time', row=n_rows)
+    fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=n_rows)
+    fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
         height=1000 if show_per_effort else 750,
         title_text=title,
         title_y=1.0,
-        legend=dict(orientation='h', yanchor='bottom', y=1.04),
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.04, font=dict(color='#2c2c2c', size=14)),
         margin=dict(t=100, b=40),
     )
     return fig
@@ -225,7 +251,8 @@ def plot_bifurcation(x_data, s_data, e_data, xlabel, title,
             annotation_position='top right', row=1, col=1,
         )
         fig.add_vline(x=vline_x, line_dash='dash', line_color='gray', row=1, col=2)
-    fig.update_xaxes(title_text=xlabel)
+    fig.update_xaxes(title_text=xlabel, title_font=_LABEL_FONT)
+    fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(height=600, title_text=title, margin=dict(t=60, b=40))
     return fig
 
@@ -254,8 +281,9 @@ def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=COLORS4):
                 x=[lo, hi], y=[lo, hi], mode='lines',
                 line=dict(color='black', width=0.8, dash='dash'), showlegend=False,
             ), row=row, col=col)
-    fig.update_yaxes(title_text='S(t+1)', row=1, col=1)
-    fig.update_yaxes(title_text='E(t+1)', row=2, col=1)
+    fig.update_yaxes(title_text='S(t+1)', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='E(t+1)', title_font=_LABEL_FONT, row=2, col=1)
+    fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
         height=600,
         title_text='Poincare — x(t) vs x(t+1) (attractor only)',
@@ -348,12 +376,14 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
 
         fig.update_layout(
             height=120,
-            margin=dict(t=5, b=50, l=80, r=80),
-            yaxis=dict(tickfont=dict(size=11)),
+            margin=dict(t=5, b=65, l=80, r=80),
+            yaxis=dict(tickfont=_LABEL_FONT),
             xaxis=dict(
                 type='category',
-                tickfont=dict(size=11),
+                tickfont=_LABEL_FONT,
                 title=param_label,
+                title_font=_LABEL_FONT,
+                title_standoff=12,
                 side='bottom',
             ),
         )
