@@ -11,8 +11,9 @@ DEFAULT_PARAMS = {
     'gamma_p': 1.0,
     'gamma_s': 1.0,
     'gamma_e': 0.225,
-    'gamma_f': 1.0,
-    'gamma_fp': 10.0,
+    'gamma_f': 0.2,
+    'gamma_fp': 1.0,
+    
     
     'e_d': 1.0,
     'e_sw': 0.95,
@@ -20,6 +21,8 @@ DEFAULT_PARAMS = {
     
     'K': 1.0,
     'F_threshold': 0.5,
+    'F_min': 0.2,
+    'F_max': 0.6,
     'r': 0.225,
     
     'q0': 0.07,
@@ -224,7 +227,7 @@ class DynamicalSystem():
             (and values reaching areas they shouldn't reach).
         '''
         S_next = np.clip(
-            [S * np.exp(gamma_s * r * (1 - S / K) - q * E)],
+            [S * np.exp(gamma_s * (r * (1 - S / K) - q * E))],
             np.finfo(np.float128).eps,
             POSITIVE_INF
         )[0]
@@ -259,7 +262,9 @@ class DynamicalSystem():
         pw = self.wholesale_price()
         delta = gamma_f * (pm - pw)
         
-        return np.clip([F * np.exp(delta) / (1 + F * (np.exp(delta) - 1))], CLOSE_TO_ZERO, CLOSE_TO_ONE)[0]
+        F_min = self.params.get('F_min', CLOSE_TO_ZERO)
+        F_max = self.params.get('F_max', CLOSE_TO_ONE)
+        return np.clip([F * np.exp(delta) / (1 + F * (np.exp(delta) - 1))], F_min, F_max)[0]
     def p_fraudster_state_dimful(self):
         F = self.state['F']
         FP = self.state['FP']

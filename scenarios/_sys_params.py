@@ -25,6 +25,8 @@ _GROUPS = [
         ('c0',          'c₀  (fishing cost, honest)',      0.1,  3.0,  0.05),
         ('c1',          'c₁  (fishing cost, full fraud)',  0.01, 2.0,  0.01),
         ('F_threshold', 'F̂   (detection threshold)',       0.05, 0.95, 0.05),
+        ('F_min',       'F_min (min fraudster share)',       0.0,  1.0,  0.05),
+        ('F_max',       'F_max (max fraudster share)',       0.0,  1.0,  0.05),
     ]),
 ]
 

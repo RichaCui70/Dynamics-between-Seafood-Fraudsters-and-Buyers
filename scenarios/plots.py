@@ -54,82 +54,11 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
     fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
     fig.update_yaxes(rangemode='tozero')
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
+    fig.update_yaxes(range=[0, 1], row=2)
     fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=2)
     fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
         height=600, title_text=title,
-        title_y=1.0,
-        title_font=dict(color='#1a1a1a', size=20),
-        legend=dict(orientation='h', yanchor='bottom', y=1.06, font=dict(color='#2c2c2c', size=14)),
-        margin=dict(t=100, b=40),
-    )
-    return fig
-
-
-def plot_4var_ts_fp_zoom(ts_dict, t_arr, param_vals, param_label, title,
-                         fp_ylim=0.05, colors=COLORS4):
-    """Like plot_4var_ts but with a third row showing only FP on a zoomed y-axis.
-    Row 1: S / E
-    Row 2: F / FP
-    Row 3: FP (zoomed to [0, fp_ylim])
-    """
-    _N = len(param_vals)
-    fig = make_subplots(
-        rows=3, cols=_N,
-        subplot_titles=[f'{param_label} = {v}' for v in param_vals] + [''] * 2 * _N,
-        shared_xaxes=True, vertical_spacing=0.08, horizontal_spacing=0.05,
-    )
-    se_max = max(
-        max(float(ts_dict[v]['Seafood'].max()), float(ts_dict[v]['Effort'].max()),
-            float(ts_dict[v]['Harvest'].max()))
-        for v in param_vals
-    )
-    for col, v in enumerate(param_vals, 1):
-        d = ts_dict[v]
-        show = col == 1
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Seafood'], mode='lines',
-            line=dict(color=colors['S'], width=1.5),
-            name='Seafood (S)', legendgroup='S', showlegend=show,
-        ), row=1, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Effort'], mode='lines',
-            line=dict(color=colors['E'], width=1.5),
-            name='Effort (E)', legendgroup='E', showlegend=show,
-        ), row=1, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Harvest'], mode='lines',
-            line=dict(color=HARVEST_COLOR, width=1.5),
-            name='Harvest (H)', legendgroup='H', showlegend=show,
-        ), row=1, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Fraudsters'], mode='lines',
-            line=dict(color=colors['F'], width=1.5),
-            name='Fraudsters (F)', legendgroup='F', showlegend=show,
-        ), row=2, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Perception of Fraud'], mode='lines',
-            line=dict(color=colors['FP'], width=1.5),
-            name='Perception (FP)', legendgroup='FP', showlegend=show,
-        ), row=2, col=col)
-        fig.add_trace(go.Scatter(
-            x=t_arr, y=d['Perception of Fraud'], mode='lines',
-            line=dict(color=colors['FP'], width=1.5),
-            name='FP (zoomed)', legendgroup='FPz', showlegend=show,
-        ), row=3, col=col)
-
-    fig.update_yaxes(title_text='S / E / H', title_font=_LABEL_FONT, row=1, col=1)
-    fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
-    fig.update_yaxes(title_text='FP (zoom)', title_font=_LABEL_FONT, range=[0, fp_ylim], row=3, col=1)
-    for col in range(2, _N + 1):
-        fig.update_yaxes(range=[0, fp_ylim], row=3, col=col)
-    fig.update_yaxes(rangemode='tozero', row=1)
-    fig.update_yaxes(rangemode='tozero', row=2)
-    fig.update_yaxes(range=[0, se_max * 1.05], row=1)
-    fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=3)
-    fig.update_annotations(font=_LABEL_FONT)
-    fig.update_layout(
-        height=800, title_text=title,
         title_y=1.0,
         title_font=dict(color='#1a1a1a', size=20),
         legend=dict(orientation='h', yanchor='bottom', y=1.06, font=dict(color='#2c2c2c', size=14)),
@@ -216,6 +145,7 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
         fig.update_yaxes(title_text='Per-Effort', title_font=_LABEL_FONT, row=4, col=1)
     fig.update_yaxes(rangemode='tozero')
     fig.update_yaxes(range=[0, se_max * 1.05], row=1)
+    fig.update_yaxes(range=[0, 1], row=2)
     fig.update_xaxes(title_text='Time', title_font=_LABEL_FONT, row=n_rows)
     fig.update_annotations(font=_LABEL_FONT)
     fig.update_layout(
@@ -229,12 +159,12 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
     return fig
 
 
-def plot_bifurcation(x_data, s_data, e_data, xlabel, title,
+def plot_bifurcation(x_data, s_data, e_data, f_data, fp_data, xlabel, title,
                      vline_x=None, vline_label=None, colors=COLORS4):
     fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=['Seafood S*', 'Effort E*'],
-        horizontal_spacing=0.08,
+        rows=2, cols=2,
+        subplot_titles=['Seafood S*', 'Effort E*', 'Fraudsters F*', 'Perception FP*'],
+        horizontal_spacing=0.08, vertical_spacing=0.12,
     )
     fig.add_trace(go.Scattergl(
         x=x_data, y=s_data, mode='markers',
@@ -244,6 +174,14 @@ def plot_bifurcation(x_data, s_data, e_data, xlabel, title,
         x=x_data, y=e_data, mode='markers',
         marker=dict(color=colors['E'], size=2, opacity=0.4), showlegend=False,
     ), row=1, col=2)
+    fig.add_trace(go.Scattergl(
+        x=x_data, y=f_data, mode='markers',
+        marker=dict(color=colors['F'], size=2, opacity=0.4), showlegend=False,
+    ), row=2, col=1)
+    fig.add_trace(go.Scattergl(
+        x=x_data, y=fp_data, mode='markers',
+        marker=dict(color=colors['FP'], size=2, opacity=0.4), showlegend=False,
+    ), row=2, col=2)
     if vline_x is not None:
         fig.add_vline(
             x=vline_x, line_dash='dash', line_color='gray',
@@ -251,9 +189,12 @@ def plot_bifurcation(x_data, s_data, e_data, xlabel, title,
             annotation_position='top right', row=1, col=1,
         )
         fig.add_vline(x=vline_x, line_dash='dash', line_color='gray', row=1, col=2)
-    fig.update_xaxes(title_text=xlabel, title_font=_LABEL_FONT)
+        fig.add_vline(x=vline_x, line_dash='dash', line_color='gray', row=2, col=1)
+        fig.add_vline(x=vline_x, line_dash='dash', line_color='gray', row=2, col=2)
+    fig.update_xaxes(title_text=xlabel, title_font=_LABEL_FONT, row=2)
+    fig.update_yaxes(range=[0, 1], row=2)
     fig.update_annotations(font=_LABEL_FONT)
-    fig.update_layout(height=600, title_text=title, margin=dict(t=60, b=40))
+    fig.update_layout(height=750, title_text=title, margin=dict(t=60, b=40))
     return fig
 
 

@@ -43,7 +43,7 @@ def ps_bifurcation(a_min: float, a_max: float, resolution: int,
                    sys_params: tuple = ()) -> tuple:
     a_sweep = np.linspace(a_min, a_max, resolution)
     burn = int(bif_time * burn_frac)
-    bp_a, bp_S, bp_E = [], [], []
+    bp_a, bp_S, bp_E, bp_F, bp_FP = [], [], [], [], []
     for av in a_sweep:
         p = DEFAULT_PARAMS.copy()
         if sys_params:
@@ -55,11 +55,15 @@ def ps_bifurcation(a_min: float, a_max: float, resolution: int,
         ts = sys.time_series_plot(time=bif_time)
         s_att = ts['Seafood'][burn:].astype(np.float64)
         e_att = ts['Effort'][burn:].astype(np.float64)
+        f_att = ts['Fraudsters'][burn:].astype(np.float64)
+        fp_att = ts['Perception of Fraud'][burn:].astype(np.float64)
         n = len(s_att)
         bp_a.extend([float(av)] * n)
         bp_S.extend(s_att.tolist())
         bp_E.extend(e_att.tolist())
-    return np.array(bp_a), np.array(bp_S), np.array(bp_E)
+        bp_F.extend(f_att.tolist())
+        bp_FP.extend(fp_att.tolist())
+    return np.array(bp_a), np.array(bp_S), np.array(bp_E), np.array(bp_F), np.array(bp_FP)
 
 
 @st.cache_data(show_spinner=False)
@@ -82,7 +86,7 @@ def ps_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
                       sys_params: tuple = ()) -> tuple:
     ft_sweep = np.linspace(ft_min, ft_max, resolution)
     burn = int(bif_time * burn_frac)
-    bf_f, bf_S, bf_E = [], [], []
+    bf_f, bf_S, bf_E, bf_F, bf_FP = [], [], [], [], []
     for ft in ft_sweep:
         p = DEFAULT_PARAMS.copy()
         if sys_params:
@@ -95,11 +99,15 @@ def ps_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
         ts = sys.time_series_plot(time=bif_time)
         s_att = ts['Seafood'][burn:].astype(np.float64)
         e_att = ts['Effort'][burn:].astype(np.float64)
+        f_att = ts['Fraudsters'][burn:].astype(np.float64)
+        fp_att = ts['Perception of Fraud'][burn:].astype(np.float64)
         n = len(s_att)
         bf_f.extend([float(ft)] * n)
         bf_S.extend(s_att.tolist())
         bf_E.extend(e_att.tolist())
-    return np.array(bf_f), np.array(bf_S), np.array(bf_E)
+        bf_F.extend(f_att.tolist())
+        bf_FP.extend(fp_att.tolist())
+    return np.array(bf_f), np.array(bf_S), np.array(bf_E), np.array(bf_F), np.array(bf_FP)
 
 
 @st.cache_data(show_spinner=False)
@@ -304,11 +312,11 @@ def scenario_ps():
             "Computing bifurcation diagram (α sweep)",
             "Computing bifurcation diagram (F_threshold sweep)",
         ]):
-            bp_a, bp_S, bp_E = ps_bifurcation(
+            bp_a, bp_S, bp_E, bp_F, bp_FP = ps_bifurcation(
                 float(ps_rng[0]), float(ps_rng[1]), ps_resA, ps_bifA_iter, 0.6,
                 float(ps_ft_A), sys_t,
             )
-            bf_f, bf_S, bf_E = ps_bifurcation_ft(
+            bf_f, bf_S, bf_E, bf_F, bf_FP = ps_bifurcation_ft(
                 float(ps_a_hold), float(ps_ft_rng[0]), float(ps_ft_rng[1]),
                 ps_resB, ps_bifB_iter, 0.6, sys_t,
             )
@@ -316,7 +324,7 @@ def scenario_ps():
         bifA, bifB = st.tabs(["vs α", "vs F_threshold"])
         with bifA:
             fig = plot_bifurcation(
-                bp_a, bp_S, bp_E,
+                bp_a, bp_S, bp_E, bp_F, bp_FP,
                 xlabel='α (price premium intensity)',
                 title=f'Bifurcation Diagram over α   (F_threshold={ps_ft_A})',
                 vline_x=0.0, vline_label='α = 0 (no premium)',
@@ -324,7 +332,7 @@ def scenario_ps():
             st.plotly_chart(fig, width='stretch')
         with bifB:
             fig = plot_bifurcation(
-                bf_f, bf_S, bf_E,
+                bf_f, bf_S, bf_E, bf_F, bf_FP,
                 xlabel='F_threshold',
                 title=f'Bifurcation Diagram over F_threshold   (held {hold_tag})',
             )
