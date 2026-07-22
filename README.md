@@ -50,9 +50,6 @@ The full equations and derivations are presented in the Streamlit app (sourced f
 | 2 | **Prized / protected seafood** | Fraudster wholesale price $pw_1$ | What happens when illegal catch commands a premium over legal catch |
 | 3 | **Blast / cyanide fishing** | Destruction intensity $\alpha$ | Joint effect of higher catchability, lower costs, and lower wholesale prices from destructive methods |
 | 4 | **EEZ non-enforcement** | Violation intensity $\beta$ | Fishers access outside-EEZ waters — higher catchability but higher costs |
-| WIP | **Buyer dependence** | Demand elasticity $\varepsilon_d$ | When buyers need seafood regardless of fraud, the self-correcting mechanism breaks down |
-| WIP | **Supply elasticity (wholesale)** | Wholesale supply elasticity $\varepsilon_{s,w}$ | How wholesale price sensitivity to harvest volume affects effort dynamics and system stability ($\varepsilon_{s,w} \in [0, 3]$) |
-| WIP | **Supply elasticity (market)** | Market supply elasticity $\varepsilon_{s,m}$ | How market price sensitivity to harvest volume affects fraudster incentives and system stability ($\varepsilon_{s,m} \in [0, 3]$) |
 
 ## Parameters
 
@@ -70,6 +67,8 @@ Key parameters and their roles:
 | $\varepsilon_d$ | Demand elasticity — buyer sensitivity to perceived fraud |
 | $\varepsilon_{s,w}, \varepsilon_{s,m}$ | Supply elasticities for wholesale and market prices |
 | $\hat{F}$ | Fraud detection threshold — minimum fraud level buyers can perceive |
+| $F_{min}, F_{max}$ | Minimum and maximum level of fraud |
+| $F^{p}_{min}, F^{p}_{max}$ | Minimum and maximum level of buyers whom are aware of fraud |
 
 Default parameters (dimensionalized, from `System.py`):
 
@@ -82,6 +81,8 @@ Default parameters (dimensionalized, from `System.py`):
     'q0': 0.07, 'q1': 0.15,
     'pw0': 1.0, 'pw1': 0.81,
     'c0': 0.9, 'c1': 0.153,
+    'F_min': 0.0, 'F_max': 1.0,
+    'FP_min': 0.0, 'FP_max': 1.0,
 }
 ```
 
