@@ -1,7 +1,7 @@
 import streamlit as st
 from core.constants import DEFAULT_PARAMS
 
-_GROUPS = [
+PARAM_GROUPS = [
     ("Response speeds", [
         ('gamma_s',  'γS  (seafood response speed)',     0.1,  5.0,  0.05),
         ('gamma_e',  'γE  (effort response speed)',      0.01, 1.0,  0.005),
@@ -31,19 +31,19 @@ _GROUPS = [
 ]
 
 
-def sys_params_ui(prefix: str, exclude: set = frozenset()) -> tuple:
+def system_parameters_ui(prefix: str, exclude: set = frozenset()) -> tuple:
     """Render System Parameters expander; return sorted (key, val) tuple for cache keying."""
-    vals = {}
+    param_values = {}
     with st.expander("System Parameters", expanded=False):
-        cols = st.columns(3, gap="large")
-        for col, (group_name, params) in zip(cols, _GROUPS):
-            with col:
+        columns = st.columns(3, gap="large")
+        for column, (group_name, params) in zip(columns, PARAM_GROUPS):
+            with column:
                 st.markdown(f"**{group_name}**")
-                for key, label, lo, hi, step in params:
+                for key, label, slider_min, slider_max, slider_step in params:
                     if key in exclude:
                         continue
-                    vals[key] = st.slider(
-                        label, lo, hi, float(DEFAULT_PARAMS[key]), step,
+                    param_values[key] = st.slider(
+                        label, slider_min, slider_max, float(DEFAULT_PARAMS[key]), slider_step,
                         key=f"{prefix}_{key}",
                     )
-    return tuple(sorted(vals.items()))
+    return tuple(sorted(param_values.items()))

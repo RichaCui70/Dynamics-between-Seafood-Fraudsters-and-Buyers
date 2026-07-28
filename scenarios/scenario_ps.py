@@ -6,386 +6,455 @@ from core.System import DynamicalSystem
 from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
 from core.plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
-from ._sys_params import sys_params_ui
+from ._sys_params import system_parameters_ui
 
 
-_FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
-_ALPHA_HOLD_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
+F_THRESHOLD_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
+ALPHA_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
 
-_PS_SCALAR = 4.0
+PRICE_PREMIUM_SCALE = 4.0
 
 
 def _prized_params(alpha: float) -> dict:
     return {
-        'pw1': float(DEFAULT_PARAMS['pw0'] + alpha * _PS_SCALAR),
+        'pw1': float(DEFAULT_PARAMS['pw0'] + alpha * PRICE_PREMIUM_SCALE),
         'c1': DEFAULT_PARAMS['c0'],
         'q1': DEFAULT_PARAMS['q0'],
     }
 
 
 @st.cache_data(show_spinner=False)
-def ps_time_series(alpha_val: float, ft_val: float, sim_time: int,
-                   sys_params: tuple = ()) -> dict:
-    p = DEFAULT_PARAMS.copy()
-    if sys_params:
-        p.update(dict(sys_params))
-    p.update(_prized_params(alpha_val))
-    p['F_threshold'] = ft_val
+def prized_time_series(alpha: float, f_threshold: float, simulation_timesteps: int,
+                       system_param_overrides: tuple = ()) -> dict:
+    params = DEFAULT_PARAMS.copy()
+    if system_param_overrides:
+        params.update(dict(system_param_overrides))
+    params.update(_prized_params(alpha))
+    params['F_threshold'] = f_threshold
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
-    sys = DynamicalSystem(p, state, "dimensionalized")
-    ts = sys.time_series_plot(time=sim_time)
-    return {k: v.astype(np.float64) for k, v in ts.items()}
+    system = DynamicalSystem(params, state, "dimensionalized")
+    time_series = system.time_series_plot(time=simulation_timesteps)
+    return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
 @st.cache_data(show_spinner=False)
-def ps_bifurcation(a_min: float, a_max: float, resolution: int,
-                   bif_time: int, burn_frac: float, ft_val: float,
-                   sys_params: tuple = ()) -> tuple:
-    a_sweep = np.linspace(a_min, a_max, resolution)
-    burn = int(bif_time * burn_frac)
-    bp_a, bp_S, bp_E, bp_F, bp_FP = [], [], [], [], []
-    for av in a_sweep:
-        p = DEFAULT_PARAMS.copy()
-        if sys_params:
-            p.update(dict(sys_params))
-        p.update(_prized_params(float(av)))
-        p['F_threshold'] = ft_val
+def prized_bifurcation(alpha_min: float, alpha_max: float, resolution: int,
+                       bifurcation_timesteps: int, burn_in_fraction: float,
+                       f_threshold: float,
+                       system_param_overrides: tuple = ()) -> tuple:
+    alpha_values = np.linspace(alpha_min, alpha_max, resolution)
+    burn_in_steps = int(bifurcation_timesteps * burn_in_fraction)
+    bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception = [], [], [], [], []
+    for alpha in alpha_values:
+        params = DEFAULT_PARAMS.copy()
+        if system_param_overrides:
+            params.update(dict(system_param_overrides))
+        params.update(_prized_params(float(alpha)))
+        params['F_threshold'] = f_threshold
         state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
-        sys = DynamicalSystem(p, state, "dimensionalized")
-        ts = sys.time_series_plot(time=bif_time)
-        s_att = ts['Seafood'][burn:].astype(np.float64)
-        e_att = ts['Effort'][burn:].astype(np.float64)
-        f_att = ts['Fraudsters'][burn:].astype(np.float64)
-        fp_att = ts['Perception of Fraud'][burn:].astype(np.float64)
-        n = len(s_att)
-        bp_a.extend([float(av)] * n)
-        bp_S.extend(s_att.tolist())
-        bp_E.extend(e_att.tolist())
-        bp_F.extend(f_att.tolist())
-        bp_FP.extend(fp_att.tolist())
-    return np.array(bp_a), np.array(bp_S), np.array(bp_E), np.array(bp_F), np.array(bp_FP)
+        system = DynamicalSystem(params, state, "dimensionalized")
+        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
+        effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
+        fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
+        perception_attractor = time_series['Perception of Fraud'][burn_in_steps:].astype(np.float64)
+        attractor_length = len(seafood_attractor)
+        bif_alpha.extend([float(alpha)] * attractor_length)
+        bif_seafood.extend(seafood_attractor.tolist())
+        bif_effort.extend(effort_attractor.tolist())
+        bif_fraudsters.extend(fraudsters_attractor.tolist())
+        bif_perception.extend(perception_attractor.tolist())
+    return (
+        np.array(bif_alpha), np.array(bif_seafood), np.array(bif_effort),
+        np.array(bif_fraudsters), np.array(bif_perception),
+    )
 
 
 @st.cache_data(show_spinner=False)
-def ps_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
-                      sys_params: tuple = ()) -> dict:
-    p = DEFAULT_PARAMS.copy()
-    if sys_params:
-        p.update(dict(sys_params))
-    p.update(_prized_params(alpha_hold))
-    p['F_threshold'] = ft_val
+def prized_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
+                                      simulation_timesteps: int,
+                                      system_param_overrides: tuple = ()) -> dict:
+    params = DEFAULT_PARAMS.copy()
+    if system_param_overrides:
+        params.update(dict(system_param_overrides))
+    params.update(_prized_params(alpha_held))
+    params['F_threshold'] = f_threshold
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
-    sys = DynamicalSystem(p, state, "dimensionalized")
-    ts = sys.time_series_plot(time=sim_time)
-    return {k: v.astype(np.float64) for k, v in ts.items()}
+    system = DynamicalSystem(params, state, "dimensionalized")
+    time_series = system.time_series_plot(time=simulation_timesteps)
+    return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
 @st.cache_data(show_spinner=False)
-def ps_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
-                      resolution: int, bif_time: int, burn_frac: float,
-                      sys_params: tuple = ()) -> tuple:
-    ft_sweep = np.linspace(ft_min, ft_max, resolution)
-    burn = int(bif_time * burn_frac)
-    bf_f, bf_S, bf_E, bf_F, bf_FP = [], [], [], [], []
-    for ft in ft_sweep:
-        p = DEFAULT_PARAMS.copy()
-        if sys_params:
-            p.update(dict(sys_params))
-        p.update({
-            **_prized_params(alpha_hold), 'F_threshold': float(ft),
+def prized_bifurcation_vs_f_threshold(alpha_held: float, f_threshold_min: float,
+                                      f_threshold_max: float, resolution: int,
+                                      bifurcation_timesteps: int, burn_in_fraction: float,
+                                      system_param_overrides: tuple = ()) -> tuple:
+    f_threshold_values = np.linspace(f_threshold_min, f_threshold_max, resolution)
+    burn_in_steps = int(bifurcation_timesteps * burn_in_fraction)
+    bif_f_threshold, bif_seafood, bif_effort, bif_fraudsters, bif_perception = [], [], [], [], []
+    for f_threshold in f_threshold_values:
+        params = DEFAULT_PARAMS.copy()
+        if system_param_overrides:
+            params.update(dict(system_param_overrides))
+        params.update({
+            **_prized_params(alpha_held), 'F_threshold': float(f_threshold),
         })
         state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
-        sys = DynamicalSystem(p, state, "dimensionalized")
-        ts = sys.time_series_plot(time=bif_time)
-        s_att = ts['Seafood'][burn:].astype(np.float64)
-        e_att = ts['Effort'][burn:].astype(np.float64)
-        f_att = ts['Fraudsters'][burn:].astype(np.float64)
-        fp_att = ts['Perception of Fraud'][burn:].astype(np.float64)
-        n = len(s_att)
-        bf_f.extend([float(ft)] * n)
-        bf_S.extend(s_att.tolist())
-        bf_E.extend(e_att.tolist())
-        bf_F.extend(f_att.tolist())
-        bf_FP.extend(fp_att.tolist())
-    return np.array(bf_f), np.array(bf_S), np.array(bf_E), np.array(bf_F), np.array(bf_FP)
+        system = DynamicalSystem(params, state, "dimensionalized")
+        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
+        effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
+        fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
+        perception_attractor = time_series['Perception of Fraud'][burn_in_steps:].astype(np.float64)
+        attractor_length = len(seafood_attractor)
+        bif_f_threshold.extend([float(f_threshold)] * attractor_length)
+        bif_seafood.extend(seafood_attractor.tolist())
+        bif_effort.extend(effort_attractor.tolist())
+        bif_fraudsters.extend(fraudsters_attractor.tolist())
+        bif_perception.extend(perception_attractor.tolist())
+    return (
+        np.array(bif_f_threshold), np.array(bif_seafood), np.array(bif_effort),
+        np.array(bif_fraudsters), np.array(bif_perception),
+    )
 
 
 @st.cache_data(show_spinner=False)
-def ps_spectral_sweep(a_min: float, a_max: float, resolution: int,
-                      sys_params: tuple = ()) -> tuple:
-    a_vals = np.linspace(a_min, a_max, resolution)
-    rho_vals = np.empty(resolution)
-    for i, av in enumerate(a_vals):
-        p = DEFAULT_PARAMS.copy()
-        if sys_params:
-            p.update(dict(sys_params))
-        p.update(_prized_params(float(av)))
+def prized_spectral_sweep(alpha_min: float, alpha_max: float, resolution: int,
+                          system_param_overrides: tuple = ()) -> tuple:
+    alpha_values = np.linspace(alpha_min, alpha_max, resolution)
+    spectral_radii = np.empty(resolution)
+    for index, alpha in enumerate(alpha_values):
+        params = DEFAULT_PARAMS.copy()
+        if system_param_overrides:
+            params.update(dict(system_param_overrides))
+        params.update(_prized_params(float(alpha)))
         state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
-        sys = DynamicalSystem(p, state, "dimensionalized")
-        result = sys.stability_analysis()
-        rho_vals[i] = result['spectral_radius']
-    return a_vals.astype(np.float64), rho_vals.astype(np.float64)
+        system = DynamicalSystem(params, state, "dimensionalized")
+        result = system.stability_analysis()
+        spectral_radii[index] = result['spectral_radius']
+    return alpha_values.astype(np.float64), spectral_radii.astype(np.float64)
 
 
 @st.cache_data(show_spinner=False)
-def ps_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
+def prized_baseline(simulation_timesteps: int, system_param_overrides: tuple = ()) -> dict:
     """Baseline: no fraud (F=0, FP=0), standard parameters, no premium (alpha=0)."""
-    p = DEFAULT_PARAMS.copy()
-    if sys_params:
-        p.update(dict(sys_params))
-    p.update(_prized_params(0.0))
-    p.update({'F_threshold': 0.5})
+    params = DEFAULT_PARAMS.copy()
+    if system_param_overrides:
+        params.update(dict(system_param_overrides))
+    params.update(_prized_params(0.0))
+    params.update({'F_threshold': 0.5})
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
-    sys = DynamicalSystem(p, state, "dimensionalized")
-    ts = sys.time_series_plot(time=sim_time)
-    burn = int(sim_time * 0.6)
+    system = DynamicalSystem(params, state, "dimensionalized")
+    time_series = system.time_series_plot(time=simulation_timesteps)
+    burn_in_steps = int(simulation_timesteps * 0.6)
     return {
-        'Seafood': float(np.mean(ts['Seafood'][burn:])),
-        'Harvest': float(np.mean(ts['Harvest'][burn:])),
-        'Market Price': float(np.mean(ts['Market Price'][burn:])),
+        'Seafood': float(np.mean(time_series['Seafood'][burn_in_steps:])),
+        'Harvest': float(np.mean(time_series['Harvest'][burn_in_steps:])),
+        'Market Price': float(np.mean(time_series['Market Price'][burn_in_steps:])),
     }
 
 
 @st.cache_data(show_spinner=False)
-def ps_baseline_ts(sim_time: int, sys_params: tuple = ()) -> dict:
+def prized_baseline_time_series(simulation_timesteps: int,
+                                system_param_overrides: tuple = ()) -> dict:
     """Full time series at alpha=0, F=0, FP=0 for the fixed baseline column."""
-    p = DEFAULT_PARAMS.copy()
-    if sys_params:
-        p.update(dict(sys_params))
-    p.update(_prized_params(0.0))
-    p.update({'F_threshold': 0.5})
+    params = DEFAULT_PARAMS.copy()
+    if system_param_overrides:
+        params.update(dict(system_param_overrides))
+    params.update(_prized_params(0.0))
+    params.update({'F_threshold': 0.5})
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
-    sys = DynamicalSystem(p, state, "dimensionalized")
-    ts = sys.time_series_plot(time=sim_time)
-    return {k: v.astype(np.float64) for k, v in ts.items()}
+    system = DynamicalSystem(params, state, "dimensionalized")
+    time_series = system.time_series_plot(time=simulation_timesteps)
+    return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
 def scenario_ps():
     status_slot = scenario_header("Scenario 2 — Prized / Protected Seafood")
     st.caption(
-        f"α drives a price premium for protected species: pw₁ = pw₀ + α·{_PS_SCALAR:.0f}. "
+        f"α drives a price premium for protected species: pw₁ = pw₀ + α·{PRICE_PREMIUM_SCALE:.0f}. "
         f"Same gear: c₁ = c₀, q₁ = q₀. Focus parameter: α."
     )
 
     with st.expander("Analysis Parameters", expanded=False):
-        colA, colB = st.columns(2, gap="large")
+        col_vs_alpha, col_vs_f_threshold = st.columns(2, gap="large")
 
-        with colA:
+        with col_vs_alpha:
             st.markdown("#### vs α")
             st.markdown("**Time Series & Poincare**")
-            ps_simA = st.slider("Time period", 100, 1000, 400, 50, key="ps_simA")
-            ps_a_vals = st.multiselect(
-                "α values", _ALPHA_HOLD_OPTIONS,
+            simulation_timesteps_alpha = st.slider(
+                "Time period", 100, 1000, 400, 50, key="ps_simA",
+            )
+            selected_alphas = st.multiselect(
+                "α values", ALPHA_OPTIONS,
                 default=[0.15, 0.40, 0.70, 1.00], key="ps_a",
             )
-            ps_ft_A = st.selectbox(
-                "F_threshold", _FT_OPTIONS,
-                index=_FT_OPTIONS.index(0.5), key="ps_ftA",
+            f_threshold_for_alpha_sweep = st.selectbox(
+                "F_threshold", F_THRESHOLD_OPTIONS,
+                index=F_THRESHOLD_OPTIONS.index(0.5), key="ps_ftA",
             )
             st.markdown("**Bifurcation**")
-            ps_bifA_iter = st.slider(
+            bifurcation_timesteps_alpha = st.slider(
                 "Iteration length", 100, 1000, 300, 50, key="ps_bifA_iter",
             )
-            ps_resA = st.slider(
+            bifurcation_resolution_alpha = st.slider(
                 "Resolution", 50, 500, 200, 50, key="ps_resA",
             )
-            ps_rng = st.slider(
+            alpha_range = st.slider(
                 "α range", 0.0, 1.0, (0.0, 1.0), 0.05,
                 key="ps_rng",
             )
 
-        with colB:
+        with col_vs_f_threshold:
             st.markdown("#### vs F_threshold")
             st.markdown("**Time Series & Poincare**")
-            ps_simB = st.slider("Time period", 100, 1000, 400, 50, key="ps_simB")
-            ps_ft_vals = st.multiselect(
-                "F_threshold values", _FT_OPTIONS,
+            simulation_timesteps_ft = st.slider(
+                "Time period", 100, 1000, 400, 50, key="ps_simB",
+            )
+            selected_f_thresholds = st.multiselect(
+                "F_threshold values", F_THRESHOLD_OPTIONS,
                 default=[0.25, 0.5, 0.75, 0.95], key="ps_ftv",
             )
-            ps_a_hold = st.selectbox(
-                "α (held)", _ALPHA_HOLD_OPTIONS,
-                index=_ALPHA_HOLD_OPTIONS.index(0.40), key="ps_a_hold",
+            alpha_held = st.selectbox(
+                "α (held)", ALPHA_OPTIONS,
+                index=ALPHA_OPTIONS.index(0.40), key="ps_a_hold",
             )
             st.markdown("**Bifurcation**")
-            ps_bifB_iter = st.slider(
+            bifurcation_timesteps_ft = st.slider(
                 "Iteration length", 100, 1000, 300, 50, key="ps_bifB_iter",
             )
-            ps_resB = st.slider(
+            bifurcation_resolution_ft = st.slider(
                 "Resolution", 50, 500, 200, 50, key="ps_resB",
             )
-            ps_ft_rng = st.slider(
+            f_threshold_range = st.slider(
                 "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="ps_ftrng",
             )
 
-    sys_t = sys_params_ui("ps", exclude={'pw1'})
+    system_param_overrides = system_parameters_ui("ps", exclude={'pw1'})
 
-    if not ps_a_vals:
+    if not selected_alphas:
         st.warning("Select at least one *α* value.")
         return
-    if not ps_ft_vals:
+    if not selected_f_thresholds:
         st.warning("Select at least one *F_threshold* value.")
         return
 
-    ps_a_vals = sorted(ps_a_vals)
-    ps_ft_vals = sorted(ps_ft_vals)
-    _burnA = int(ps_simA * 0.6)
-    _burnB = int(ps_simB * 0.6)
+    selected_alphas = sorted(selected_alphas)
+    selected_f_thresholds = sorted(selected_f_thresholds)
+    burn_in_steps_alpha = int(simulation_timesteps_alpha * 0.6)
+    burn_in_steps_ft = int(simulation_timesteps_ft * 0.6)
 
-    tab_ts, tab_bif, tab_rm, tab_stab = st.tabs(
+    tab_time_series, tab_bifurcation, tab_poincare, tab_stability = st.tabs(
         ["Time Series", "Bifurcation", "Poincare", "Stability"]
     )
 
-    with tab_ts:
+    with tab_time_series:
         with status_indicator(status_slot, [
             "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
             "Computing baseline (no fraud)",
         ]):
-            ts2 = {a: ps_time_series(float(a), float(ps_ft_A), ps_simA, sys_t) for a in ps_a_vals}
-            ts_bl = ps_baseline_ts(ps_simA, sys_t)
-            t2_A = np.arange(ps_simA + 1)
-            ts2_ft = {
-                ft: ps_time_series_ft(float(ps_a_hold), float(ft), ps_simB, sys_t)
-                for ft in ps_ft_vals
+            time_series_by_alpha = {
+                alpha: prized_time_series(
+                    float(alpha), float(f_threshold_for_alpha_sweep),
+                    simulation_timesteps_alpha, system_param_overrides,
+                )
+                for alpha in selected_alphas
             }
-            t2_B = np.arange(ps_simB + 1)
-            ps_baseline_vals = ps_baseline(ps_simA, sys_t)
+            baseline_time_series = prized_baseline_time_series(
+                simulation_timesteps_alpha, system_param_overrides,
+            )
+            time_axis_alpha = np.arange(simulation_timesteps_alpha + 1)
+            time_series_by_f_threshold = {
+                f_threshold: prized_time_series_vs_f_threshold(
+                    float(alpha_held), float(f_threshold),
+                    simulation_timesteps_ft, system_param_overrides,
+                )
+                for f_threshold in selected_f_thresholds
+            }
+            time_axis_ft = np.arange(simulation_timesteps_ft + 1)
+            baseline_means = prized_baseline(
+                simulation_timesteps_alpha, system_param_overrides,
+            )
 
-        # Build display labels: show derived pw₁ alongside α
-        ps_col_labels = [
-            f'α={a}  (pw₁={_prized_params(a)["pw1"]:.2f})'
-            for a in ps_a_vals
+        alpha_column_labels = [
+            f'α={alpha}  (pw₁={_prized_params(alpha)["pw1"]:.2f})'
+            for alpha in selected_alphas
         ]
-        hold_tag = (
-            f'α={ps_a_hold}  '
-            f'(pw₁={_prized_params(ps_a_hold)["pw1"]:.2f})'
+        held_alpha_label = (
+            f'α={alpha_held}  '
+            f'(pw₁={_prized_params(alpha_held)["pw1"]:.2f})'
         )
 
-        hm_metrics = st.pills(
+        heatmap_metrics = st.pills(
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="ps_hm_m",
         )
         st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception)")
-        tsA, tsB = st.tabs(["vs α", "vs F_threshold"])
-        with tsA:
-            _ts_full = {'Baseline': ts_bl, **ts2}
-            _vals_full = ['Baseline'] + ps_a_vals
-            _all_labels = ['Baseline (α=0, F=FP=0)'] + ps_col_labels
+        subtab_vs_alpha, subtab_vs_f_threshold = st.tabs(["vs α", "vs F_threshold"])
+        with subtab_vs_alpha:
+            time_series_with_baseline = {'Baseline': baseline_time_series, **time_series_by_alpha}
+            param_values_with_baseline = ['Baseline'] + selected_alphas
+            column_labels = ['Baseline (α=0, F=FP=0)'] + alpha_column_labels
             fig = plot_ts_with_economics(
-                _ts_full, t2_A, _vals_full, 'α',
+                time_series_with_baseline, time_axis_alpha, param_values_with_baseline, 'α',
                 f'Prized Seafood — Time Series as α Increases   '
-                f'(c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']},  F_threshold={ps_ft_A})',
+                f'(c₁=c₀={DEFAULT_PARAMS["c0"]},  q₁=q₀={DEFAULT_PARAMS["q0"]},  F_threshold={f_threshold_for_alpha_sweep})',
             )
-            for i, lbl in enumerate(_all_labels):
-                fig.layout.annotations[i].text = lbl
+            for index, label in enumerate(column_labels):
+                fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
-            if hm_metrics:
-                hm = plot_ts_heatmap(_ts_full, _vals_full, 'α', hm_metrics, baseline_dict=ps_baseline_vals)
-                if hm:
-                    for hm_fig in hm:
-                        st.plotly_chart(hm_fig, width='stretch')
-        with tsB:
-            ts_bl_B = ps_baseline_ts(ps_simB, sys_t)
-            _ts_full_ft = {'Baseline': ts_bl_B, **ts2_ft}
-            _vals_full_ft = ['Baseline'] + ps_ft_vals
-            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in ps_ft_vals]
+            if heatmap_metrics:
+                heatmap_figs = plot_ts_heatmap(
+                    time_series_with_baseline, param_values_with_baseline, 'α',
+                    heatmap_metrics, baseline_dict=baseline_means,
+                )
+                if heatmap_figs:
+                    for heatmap_fig in heatmap_figs:
+                        st.plotly_chart(heatmap_fig, width='stretch')
+        with subtab_vs_f_threshold:
+            baseline_time_series_ft = prized_baseline_time_series(
+                simulation_timesteps_ft, system_param_overrides,
+            )
+            time_series_ft_with_baseline = {
+                'Baseline': baseline_time_series_ft, **time_series_by_f_threshold,
+            }
+            f_threshold_values_with_baseline = ['Baseline'] + selected_f_thresholds
+            f_threshold_column_labels = (
+                ['Baseline (F=FP=0)'] + [str(f_threshold) for f_threshold in selected_f_thresholds]
+            )
             fig = plot_ts_with_economics(
-                _ts_full_ft, t2_B, _vals_full_ft, 'F_threshold',
+                time_series_ft_with_baseline, time_axis_ft,
+                f_threshold_values_with_baseline, 'F_threshold',
                 f'Prized Seafood — Time Series as F_threshold Increases   '
-                f'(held {hold_tag},  c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']})',
+                f'(held {held_alpha_label},  c₁=c₀={DEFAULT_PARAMS["c0"]},  q₁=q₀={DEFAULT_PARAMS["q0"]})',
             )
-            for i, lbl in enumerate(_ft_labels):
-                fig.layout.annotations[i].text = lbl
+            for index, label in enumerate(f_threshold_column_labels):
+                fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
-            if hm_metrics:
-                hm = plot_ts_heatmap(_ts_full_ft, _vals_full_ft, 'F_threshold', hm_metrics, baseline_dict=ps_baseline_vals)
-                if hm:
-                    for hm_fig in hm:
-                        st.plotly_chart(hm_fig, width='stretch')
+            if heatmap_metrics:
+                heatmap_figs = plot_ts_heatmap(
+                    time_series_ft_with_baseline, f_threshold_values_with_baseline,
+                    'F_threshold', heatmap_metrics, baseline_dict=baseline_means,
+                )
+                if heatmap_figs:
+                    for heatmap_fig in heatmap_figs:
+                        st.plotly_chart(heatmap_fig, width='stretch')
 
-    with tab_bif:
+    with tab_bifurcation:
         with status_indicator(status_slot, [
             "Computing bifurcation diagram (α sweep)",
             "Computing bifurcation diagram (F_threshold sweep)",
         ]):
-            bp_a, bp_S, bp_E, bp_F, bp_FP = ps_bifurcation(
-                float(ps_rng[0]), float(ps_rng[1]), ps_resA, ps_bifA_iter, 0.6,
-                float(ps_ft_A), sys_t,
+            bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception = prized_bifurcation(
+                float(alpha_range[0]), float(alpha_range[1]),
+                bifurcation_resolution_alpha, bifurcation_timesteps_alpha, 0.6,
+                float(f_threshold_for_alpha_sweep), system_param_overrides,
             )
-            bf_f, bf_S, bf_E, bf_F, bf_FP = ps_bifurcation_ft(
-                float(ps_a_hold), float(ps_ft_rng[0]), float(ps_ft_rng[1]),
-                ps_resB, ps_bifB_iter, 0.6, sys_t,
+            (
+                bif_f_threshold, bif_seafood_ft, bif_effort_ft,
+                bif_fraudsters_ft, bif_perception_ft,
+            ) = prized_bifurcation_vs_f_threshold(
+                float(alpha_held), float(f_threshold_range[0]), float(f_threshold_range[1]),
+                bifurcation_resolution_ft, bifurcation_timesteps_ft, 0.6, system_param_overrides,
             )
 
-        bifA, bifB = st.tabs(["vs α", "vs F_threshold"])
-        with bifA:
+        bif_subtab_alpha, bif_subtab_ft = st.tabs(["vs α", "vs F_threshold"])
+        with bif_subtab_alpha:
             fig = plot_bifurcation(
-                bp_a, bp_S, bp_E, bp_F, bp_FP,
+                bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception,
                 xlabel='α (price premium intensity)',
-                title=f'Bifurcation Diagram over α   (F_threshold={ps_ft_A})',
+                title=f'Bifurcation Diagram over α   (F_threshold={f_threshold_for_alpha_sweep})',
                 vline_x=0.0, vline_label='α = 0 (no premium)',
             )
             st.plotly_chart(fig, width='stretch')
-        with bifB:
+        with bif_subtab_ft:
             fig = plot_bifurcation(
-                bf_f, bf_S, bf_E, bf_F, bf_FP,
+                bif_f_threshold, bif_seafood_ft, bif_effort_ft,
+                bif_fraudsters_ft, bif_perception_ft,
                 xlabel='F_threshold',
-                title=f'Bifurcation Diagram over F_threshold   (held {hold_tag})',
+                title=f'Bifurcation Diagram over F_threshold   (held {held_alpha_label})',
             )
             st.plotly_chart(fig, width='stretch')
 
-    with tab_rm:
+    with tab_poincare:
         with status_indicator(status_slot, [
             "Running time-series simulations (α sweep)",
             "Running time-series simulations (F_threshold sweep)",
         ]):
-            ts2 = {a: ps_time_series(float(a), float(ps_ft_A), ps_simA, sys_t) for a in ps_a_vals}
-            ts_bl = ps_baseline_ts(ps_simA, sys_t)
-            ts2_ft = {
-                ft: ps_time_series_ft(float(ps_a_hold), float(ft), ps_simB, sys_t)
-                for ft in ps_ft_vals
+            time_series_by_alpha = {
+                alpha: prized_time_series(
+                    float(alpha), float(f_threshold_for_alpha_sweep),
+                    simulation_timesteps_alpha, system_param_overrides,
+                )
+                for alpha in selected_alphas
+            }
+            baseline_time_series = prized_baseline_time_series(
+                simulation_timesteps_alpha, system_param_overrides,
+            )
+            time_series_by_f_threshold = {
+                f_threshold: prized_time_series_vs_f_threshold(
+                    float(alpha_held), float(f_threshold),
+                    simulation_timesteps_ft, system_param_overrides,
+                )
+                for f_threshold in selected_f_thresholds
             }
 
-        rmA, rmB = st.tabs(["vs α", "vs F_threshold"])
-        with rmA:
-            _ts_full = {'Baseline': ts_bl, **ts2}
-            _vals_full = ['Baseline'] + ps_a_vals
-            _all_labels = ['Baseline (α=0, F=FP=0)'] + ps_col_labels
-            fig = plot_return_maps(_ts_full, _vals_full, 'α', _burnA)
-            for i, lbl in enumerate(_all_labels):
-                fig.layout.annotations[i].text = lbl
+        poincare_vs_alpha, poincare_vs_ft = st.tabs(["vs α", "vs F_threshold"])
+        with poincare_vs_alpha:
+            time_series_with_baseline = {'Baseline': baseline_time_series, **time_series_by_alpha}
+            param_values_with_baseline = ['Baseline'] + selected_alphas
+            column_labels = ['Baseline (α=0, F=FP=0)'] + alpha_column_labels
+            fig = plot_return_maps(
+                time_series_with_baseline, param_values_with_baseline, 'α', burn_in_steps_alpha,
+            )
+            for index, label in enumerate(column_labels):
+                fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
-        with rmB:
-            ts_bl_B = ps_baseline_ts(ps_simB, sys_t)
-            _ts_full_ft = {'Baseline': ts_bl_B, **ts2_ft}
-            _vals_full_ft = ['Baseline'] + ps_ft_vals
-            _ft_labels = ['Baseline (F=FP=0)'] + [str(ft) for ft in ps_ft_vals]
-            fig = plot_return_maps(_ts_full_ft, _vals_full_ft, 'F_threshold', _burnB)
-            for i, lbl in enumerate(_ft_labels):
-                fig.layout.annotations[i].text = lbl
+        with poincare_vs_ft:
+            baseline_time_series_ft = prized_baseline_time_series(
+                simulation_timesteps_ft, system_param_overrides,
+            )
+            time_series_ft_with_baseline = {
+                'Baseline': baseline_time_series_ft, **time_series_by_f_threshold,
+            }
+            f_threshold_values_with_baseline = ['Baseline'] + selected_f_thresholds
+            f_threshold_column_labels = (
+                ['Baseline (F=FP=0)'] + [str(f_threshold) for f_threshold in selected_f_thresholds]
+            )
+            fig = plot_return_maps(
+                time_series_ft_with_baseline, f_threshold_values_with_baseline,
+                'F_threshold', burn_in_steps_ft,
+            )
+            for index, label in enumerate(f_threshold_column_labels):
+                fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
 
-    with tab_stab:
+    with tab_stability:
         with status_indicator(status_slot, ["Computing stability sweep"]):
-            ps_a_sweep, ps_rho = ps_spectral_sweep(0.0, 1.0, 100, sys_t)
+            alpha_sweep, spectral_radii = prized_spectral_sweep(0.0, 1.0, 100, system_param_overrides)
 
-        finite = np.isfinite(ps_rho)
-        a_fin, rho_fin = ps_a_sweep[finite], ps_rho[finite]
-        stable_mask = rho_fin < 1.0
-        y_cap = max(float(np.max(rho_fin[rho_fin < 50])) * 1.1, 2.0) if np.any(rho_fin < 50) else 5.0
-        rho_plot = np.clip(rho_fin, 0, y_cap)
+        finite_mask = np.isfinite(spectral_radii)
+        alpha_finite, spectral_radii_finite = alpha_sweep[finite_mask], spectral_radii[finite_mask]
+        stable_mask = spectral_radii_finite < 1.0
+        y_axis_cap = (
+            max(float(np.max(spectral_radii_finite[spectral_radii_finite < 50])) * 1.1, 2.0)
+            if np.any(spectral_radii_finite < 50) else 5.0
+        )
+        spectral_radii_plot = np.clip(spectral_radii_finite, 0, y_axis_cap)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=a_fin[stable_mask], y=rho_plot[stable_mask],
+            x=alpha_finite[stable_mask], y=spectral_radii_plot[stable_mask],
             mode='markers', marker=dict(color='#2E8B57', size=6),
             name='Stable (ρ < 1)',
         ))
         fig.add_trace(go.Scatter(
-            x=a_fin[~stable_mask], y=rho_plot[~stable_mask],
+            x=alpha_finite[~stable_mask], y=spectral_radii_plot[~stable_mask],
             mode='markers', marker=dict(color='#DC143C', size=6),
             name='Unstable (ρ ≥ 1)',
         ))
@@ -400,11 +469,11 @@ def scenario_ps():
             height=600,
             title_text=(
                 f'Spectral Radius vs α — Fixed-Point Stability   '
-                f'(c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']},  F_threshold={DEFAULT_PARAMS["F_threshold"]})'
+                f'(c₁=c₀={DEFAULT_PARAMS["c0"]},  q₁=q₀={DEFAULT_PARAMS["q0"]},  F_threshold={DEFAULT_PARAMS["F_threshold"]})'
             ),
             xaxis_title='Destruction Intensity (α)',
             yaxis_title='Spectral Radius  ρ = max|λᵢ|',
-            yaxis_range=[0, y_cap],
+            yaxis_range=[0, y_axis_cap],
             margin=dict(t=60, b=40),
             legend=dict(yanchor='top', y=0.99, xanchor='right', x=0.99),
         )

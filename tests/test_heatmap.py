@@ -8,7 +8,7 @@ Test suite for plot_ts_heatmap — verifying the prompt requirements:
   5.  When a param value is removed (unselected), its column disappears.
   6.  Column COUNT matches param_vals count (proxy for "same-width" alignment).
   7.  Cell values are signed % deviation from row mean (format: +X.X% / -X.X%).
-  8.  Averages use post-burn data (burn_frac=0.6 by default).
+  8.  Averages use post-burn data (burn_in_fraction=0.6 by default).
   9.  Seafood uses red→white→green colorscale; Harvest & Pm use blue colorscale.
  10.  Per-metric symmetric normalisation: z colour values in [0, 1] with 0%→0.5.
  11.  Metric display order follows HEATMAP_METRICS canonical order.
@@ -24,7 +24,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import plotly.graph_objects as go
-from scenarios.plots import plot_ts_heatmap, HEATMAP_METRICS, _CS_SEAFOOD, _CS_OTHERS
+from core.plots import plot_ts_heatmap, HEATMAP_METRICS, _CS_SEAFOOD, _CS_OTHERS
 
 
 # ---------------------------------------------------------------------------
@@ -183,14 +183,17 @@ def test_higher_avg_gives_positive_pct():
 
 
 # ---------------------------------------------------------------------------
-# Requirement 8 — averages use post-burn data (burn_frac=0.6 by default)
+# Requirement 8 — averages use post-burn data (burn_in_fraction=0.6 by default)
 # ---------------------------------------------------------------------------
 
 def test_burn_fraction_applied():
     """pv=1.0 has pre-burn=100, post-burn=0.1 → should show negative % vs pv=2.0 (const=1)."""
-    n, burn = 400, int(400 * 0.6)
-    biased = np.concatenate([np.full(burn, 100.0), np.full(n - burn, 0.1)])
-    const  = np.full(n, 1.0)
+    series_length, burn_in_steps = 400, int(400 * 0.6)
+    biased = np.concatenate([
+        np.full(burn_in_steps, 100.0),
+        np.full(series_length - burn_in_steps, 0.1),
+    ])
+    const  = np.full(series_length, 1.0)
     biased_dict = {
         1.0: {'Seafood': biased, 'Harvest': biased, 'Market Price': biased},
         2.0: {'Seafood': const,  'Harvest': const,  'Market Price': const},
@@ -203,15 +206,20 @@ def test_burn_fraction_applied():
 
 
 def test_custom_burn_fraction_zero():
-    """burn_frac=0.0 → full series is used; biased series avg >> const series avg."""
-    n, burn = 400, int(400 * 0.6)
-    biased = np.concatenate([np.full(burn, 100.0), np.full(n - burn, 0.1)])
-    const  = np.full(n, 1.0)
+    """burn_in_fraction=0.0 → full series is used; biased series avg >> const series avg."""
+    series_length, burn_in_steps = 400, int(400 * 0.6)
+    biased = np.concatenate([
+        np.full(burn_in_steps, 100.0),
+        np.full(series_length - burn_in_steps, 0.1),
+    ])
+    const  = np.full(series_length, 1.0)
     biased_dict = {
         1.0: {'Seafood': biased, 'Harvest': biased, 'Market Price': biased},
         2.0: {'Seafood': const,  'Harvest': const,  'Market Price': const},
     }
-    figs = plot_ts_heatmap(biased_dict, [1.0, 2.0], 'x', ['S̄'], burn_frac=0.0)
+    figs = plot_ts_heatmap(
+        biased_dict, [1.0, 2.0], 'x', ['S̄'], burn_in_fraction=0.0,
+    )
     pct_high = figs[0].data[0].text[0][0]  # pv=1.0 — now has very high full-series avg
     assert pct_high.startswith('+'), (
         f"pv=1.0 full-series avg ≈ 60 should be above mean — got {pct_high}"

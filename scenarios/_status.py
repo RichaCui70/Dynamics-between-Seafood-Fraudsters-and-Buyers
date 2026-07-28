@@ -10,10 +10,10 @@ def scenario_header(title: str):
     Returns an `st.empty()` placeholder that `status_indicator` will fill
     with a spinner while computing and a green checkmark once done.
     """
-    hdr_col, status_col = st.columns([20, 1], vertical_alignment="center")
-    with hdr_col:
+    header_column, status_column = st.columns([20, 1], vertical_alignment="center")
+    with header_column:
         st.header(title)
-    return status_col.empty()
+    return status_column.empty()
 
 
 @contextmanager
@@ -27,7 +27,7 @@ def status_indicator(slot, steps: Sequence[str]) -> Iterator[None]:
         with st.spinner(""):
             yield
 
-    tooltip = "\n".join(f"• {s}" for s in steps)
+    tooltip = "\n".join(f"• {step_label}" for step_label in steps)
     slot.markdown(
         "<div style='display:flex;justify-content:center;align-items:center;"
         "height:2rem;'>"

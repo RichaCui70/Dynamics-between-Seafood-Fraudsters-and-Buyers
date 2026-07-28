@@ -243,7 +243,8 @@ _CS_OTHERS  = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 _HEATMAP_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
 
 
-def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6, baseline_dict=None):
+def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics,
+                    burn_in_fraction=0.6, baseline_dict=None):
     """One figure per active metric, stacked below the time series.
 
     If baseline_dict is provided, cell values show % change from baseline.
@@ -264,13 +265,13 @@ def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=
     for metric in y_order:
         key = _HEATMAP_KEY[metric]
 
-        # Post-burn averages
+        # Post-burn-in averages
         avgs = []
         for pv in param_vals:
             arr = ts_dict[pv][key]
-            n = len(arr)
-            burn = int(n * burn_frac)
-            avgs.append(float(np.mean(arr[burn:])))
+            series_length = len(arr)
+            burn_in_steps = int(series_length * burn_in_fraction)
+            avgs.append(float(np.mean(arr[burn_in_steps:])))
 
         # Calculate % change (vs baseline or vs row mean)
         if baseline_dict and key in baseline_dict:

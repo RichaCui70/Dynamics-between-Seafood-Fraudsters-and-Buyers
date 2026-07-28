@@ -6,44 +6,45 @@ from core.System import DynamicalSystem
 
 from core.constants import VAR_COLORS, DEFAULT_PARAMS
 from ._status import scenario_header, status_indicator
-from ._sys_params import sys_params_ui
+from ._sys_params import system_parameters_ui
 
 NO_FRAUD_INIT_STATE = {'S': 0.6, 'E': 0.3, 'F': 0.0, 'FP': 0.0}
 
 @st.cache_data(show_spinner=False)
-def baseline_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
-    p = DEFAULT_PARAMS.copy()
-    if sys_params:
-        p.update(dict(sys_params))
-    p['r'] = r_val
+def baseline_time_series(growth_rate: float, simulation_timesteps: int,
+                         system_param_overrides: tuple = ()) -> dict:
+    params = DEFAULT_PARAMS.copy()
+    if system_param_overrides:
+        params.update(dict(system_param_overrides))
+    params['r'] = growth_rate
     state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
-    sys = DynamicalSystem(p, state, "dimensionalized")
-    ts = sys.time_series_plot(time=sim_time)
-    return {k: v.astype(np.float64) for k, v in ts.items()}
+    system = DynamicalSystem(params, state, "dimensionalized")
+    time_series = system.time_series_plot(time=simulation_timesteps)
+    return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
 @st.cache_data(show_spinner=False)
-def baseline_bifurcation(r_min: float, r_max: float, resolution: int,
-                         bif_time: int, burn_frac: float,
-                         sys_params: tuple = ()) -> tuple:
-    r_sweep = np.linspace(r_min, r_max, resolution)
-    burn = int(bif_time * burn_frac)
-    br_r, br_S, br_E = [], [], []
-    for rv in r_sweep:
-        p = DEFAULT_PARAMS.copy()
-        if sys_params:
-            p.update(dict(sys_params))
-        p['r'] = float(rv)
+def baseline_bifurcation(growth_rate_min: float, growth_rate_max: float, resolution: int,
+                         bifurcation_timesteps: int, burn_in_fraction: float,
+                         system_param_overrides: tuple = ()) -> tuple:
+    growth_rate_values = np.linspace(growth_rate_min, growth_rate_max, resolution)
+    burn_in_steps = int(bifurcation_timesteps * burn_in_fraction)
+    bif_growth_rates, bif_seafood, bif_effort = [], [], []
+    for growth_rate in growth_rate_values:
+        params = DEFAULT_PARAMS.copy()
+        if system_param_overrides:
+            params.update(dict(system_param_overrides))
+        params['r'] = float(growth_rate)
         state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
-        sys = DynamicalSystem(p, state, "dimensionalized")
-        ts = sys.time_series_plot(time=bif_time)
-        s_att = ts['Seafood'][burn:].astype(np.float64)
-        e_att = ts['Effort'][burn:].astype(np.float64)
-        n = len(s_att)
-        br_r.extend([float(rv)] * n)
-        br_S.extend(s_att.tolist())
-        br_E.extend(e_att.tolist())
-    return np.array(br_r), np.array(br_S), np.array(br_E)
+        system = DynamicalSystem(params, state, "dimensionalized")
+        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
+        effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
+        attractor_length = len(seafood_attractor)
+        bif_growth_rates.extend([float(growth_rate)] * attractor_length)
+        bif_seafood.extend(seafood_attractor.tolist())
+        bif_effort.extend(effort_attractor.tolist())
+    return np.array(bif_growth_rates), np.array(bif_seafood), np.array(bif_effort)
 
 
 def scenario_baseline():
@@ -54,58 +55,70 @@ def scenario_baseline():
     )
 
     with st.expander("Analysis Parameters", expanded=False):
-        _c1, _c2, _c3 = st.columns(3)
-        with _c1:
-            baseline_sim = st.slider("Simulation length", 100, 1000, 300, 50, key="baseline_sim")
-        with _c2:
-            baseline_res = st.slider("Bifurcation resolution", 50, 500, 250, 50, key="baseline_res")
-        with _c3:
-            baseline_rng = st.slider("r sweep range", 0.1, 6.0, (0.1, 4.0), 0.1, key="baseline_rng")
-        baseline_r_vals = st.multiselect(
+        col_sim, col_resolution, col_range = st.columns(3)
+        with col_sim:
+            simulation_timesteps = st.slider(
+                "Simulation length", 100, 1000, 300, 50, key="baseline_sim",
+            )
+        with col_resolution:
+            bifurcation_resolution = st.slider(
+                "Bifurcation resolution", 50, 500, 250, 50, key="baseline_res",
+            )
+        with col_range:
+            growth_rate_range = st.slider(
+                "r sweep range", 0.1, 6.0, (0.1, 4.0), 0.1, key="baseline_rng",
+            )
+        selected_growth_rates = st.multiselect(
             "r values for time series & poincare",
             [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 3.75, 4.0, 5.0],
             default=[0.5, 1.5, 2.5, 3.75],
             key="baseline_rv",
         )
 
-    sys_t = sys_params_ui("baseline")
+    system_param_overrides = system_parameters_ui("baseline")
 
-    if not baseline_r_vals:
+    if not selected_growth_rates:
         st.warning("Select at least one *r* value.")
         return
 
-    baseline_r_vals = sorted(baseline_r_vals)
-    _N = len(baseline_r_vals)
-    _burn = int(baseline_sim * 0.6)
+    selected_growth_rates = sorted(selected_growth_rates)
+    num_growth_rates = len(selected_growth_rates)
+    burn_in_steps = int(simulation_timesteps * 0.6)
 
-    tab_ts, tab_bif, tab_rm = st.tabs(
+    tab_time_series, tab_bifurcation, tab_poincare = st.tabs(
         ["Time Series", "Bifurcation", "Poincare"]
     )
 
-    with tab_ts:
+    with tab_time_series:
         with status_indicator(status_slot, ["Running time-series simulations"]):
-            ts1 = {rv: baseline_time_series(float(rv), baseline_sim, sys_t) for rv in baseline_r_vals}
-            t1 = np.arange(baseline_sim + 1)
+            time_series_by_r = {
+                growth_rate: baseline_time_series(
+                    float(growth_rate), simulation_timesteps, system_param_overrides,
+                )
+                for growth_rate in selected_growth_rates
+            }
+            time_axis = np.arange(simulation_timesteps + 1)
 
         fig = make_subplots(
-            rows=2, cols=_N,
-            subplot_titles=[f'r = {rv}' for rv in baseline_r_vals] + [''] * _N,
+            rows=2, cols=num_growth_rates,
+            subplot_titles=[f'r = {growth_rate}' for growth_rate in selected_growth_rates]
+                           + [''] * num_growth_rates,
             shared_xaxes=True, vertical_spacing=0.10, horizontal_spacing=0.05,
         )
-        for col, rv in enumerate(baseline_r_vals, 1):
-            d = ts1[rv]
+        for col, growth_rate in enumerate(selected_growth_rates, 1):
+            series = time_series_by_r[growth_rate]
             fig.add_trace(go.Scatter(
-                x=t1, y=d['Seafood'], mode='lines',
+                x=time_axis, y=series['Seafood'], mode='lines',
                 line=dict(color=VAR_COLORS['S'], width=1.5),
                 name='Seafood (S)', legendgroup='S', showlegend=(col == 1),
             ), row=1, col=col)
             fig.add_trace(go.Scatter(
-                x=t1, y=d['Harvest'], mode='lines',
+                x=time_axis, y=series['Harvest'], mode='lines',
                 line=dict(color=VAR_COLORS['Harvest'], width=1.5),
                 name='Harvest (H)', legendgroup='H', showlegend=(col == 1),
             ), row=1, col=col)
             fig.add_trace(go.Scatter(
-                x=t1, y=d['Effort'], mode='lines',
+                x=time_axis, y=series['Effort'], mode='lines',
                 line=dict(color=VAR_COLORS['E'], width=1.5),
                 name='Effort (E)', legendgroup='E', showlegend=(col == 1),
             ), row=2, col=col)
@@ -122,10 +135,11 @@ def scenario_baseline():
         )
         st.plotly_chart(fig, width='stretch')
 
-    with tab_bif:
+    with tab_bifurcation:
         with status_indicator(status_slot, ["Computing bifurcation diagram"]):
-            br_r, br_S, br_E = baseline_bifurcation(
-                float(baseline_rng[0]), float(baseline_rng[1]), baseline_res, 300, 0.6, sys_t,
+            bif_growth_rates, bif_seafood, bif_effort = baseline_bifurcation(
+                float(growth_rate_range[0]), float(growth_rate_range[1]),
+                bifurcation_resolution, 300, 0.6, system_param_overrides,
             )
 
         fig = make_subplots(
@@ -134,22 +148,24 @@ def scenario_baseline():
             horizontal_spacing=0.08,
         )
         fig.add_trace(go.Scattergl(
-            x=br_r, y=br_S, mode='markers',
+            x=bif_growth_rates, y=bif_seafood, mode='markers',
             marker=dict(color=VAR_COLORS['S'], size=2, opacity=0.4),
             showlegend=False,
         ), row=1, col=1)
         fig.add_trace(go.Scattergl(
-            x=br_r, y=br_E, mode='markers',
+            x=bif_growth_rates, y=bif_effort, mode='markers',
             marker=dict(color=VAR_COLORS['E'], size=2, opacity=0.4),
             showlegend=False,
         ), row=1, col=2)
-        _def_r = DEFAULT_PARAMS['r']
+        default_growth_rate = DEFAULT_PARAMS['r']
         fig.add_vline(
-            x=_def_r, line_dash='dash', line_color='gray',
-            annotation_text=f'Default r = {_def_r}',
+            x=default_growth_rate, line_dash='dash', line_color='gray',
+            annotation_text=f'Default r = {default_growth_rate}',
             annotation_position='top right', row=1, col=1,
         )
-        fig.add_vline(x=_def_r, line_dash='dash', line_color='gray', row=1, col=2)
+        fig.add_vline(
+            x=default_growth_rate, line_dash='dash', line_color='gray', row=1, col=2,
+        )
         fig.update_xaxes(title_text='Intrinsic Growth Rate (r)')
         fig.update_layout(
             height=600,
@@ -158,31 +174,37 @@ def scenario_baseline():
         )
         st.plotly_chart(fig, width='stretch')
 
-    with tab_rm:
+    with tab_poincare:
         with status_indicator(status_slot, ["Running time-series simulations"]):
-            ts1 = {rv: baseline_time_series(float(rv), baseline_sim, sys_t) for rv in baseline_r_vals}
+            time_series_by_r = {
+                growth_rate: baseline_time_series(
+                    float(growth_rate), simulation_timesteps, system_param_overrides,
+                )
+                for growth_rate in selected_growth_rates
+            }
 
         fig = make_subplots(
-            rows=2, cols=_N,
-            subplot_titles=[f'r = {rv}' for rv in baseline_r_vals] + [''] * _N,
+            rows=2, cols=num_growth_rates,
+            subplot_titles=[f'r = {growth_rate}' for growth_rate in selected_growth_rates]
+                           + [''] * num_growth_rates,
             vertical_spacing=0.12, horizontal_spacing=0.05,
         )
-        for col, rv in enumerate(baseline_r_vals, 1):
-            d = ts1[rv]
-            for row, (var, clr) in enumerate([
+        for col, growth_rate in enumerate(selected_growth_rates, 1):
+            series = time_series_by_r[growth_rate]
+            for row, (var_name, color) in enumerate([
                 ('Seafood', VAR_COLORS['S']), ('Effort', VAR_COLORS['E']),
             ], 1):
-                x = d[var]
-                x_t, x_tp1 = x[_burn:-1], x[_burn + 1:]
+                values = series[var_name]
+                values_t, values_t_plus_1 = values[burn_in_steps:-1], values[burn_in_steps + 1:]
                 fig.add_trace(go.Scattergl(
-                    x=x_t, y=x_tp1, mode='markers',
-                    marker=dict(color=clr, size=2, opacity=0.6),
+                    x=values_t, y=values_t_plus_1, mode='markers',
+                    marker=dict(color=color, size=2, opacity=0.6),
                     showlegend=False,
                 ), row=row, col=col)
-                lo = float(min(x_t.min(), x_tp1.min())) * 0.9
-                hi = float(max(x_t.max(), x_tp1.max())) * 1.1
+                axis_min = float(min(values_t.min(), values_t_plus_1.min())) * 0.9
+                axis_max = float(max(values_t.max(), values_t_plus_1.max())) * 1.1
                 fig.add_trace(go.Scatter(
-                    x=[lo, hi], y=[lo, hi], mode='lines',
+                    x=[axis_min, axis_max], y=[axis_min, axis_max], mode='lines',
                     line=dict(color='black', width=0.8, dash='dash'),
                     showlegend=False,
                 ), row=row, col=col)
