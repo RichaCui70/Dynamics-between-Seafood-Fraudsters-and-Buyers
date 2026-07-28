@@ -3,10 +3,10 @@ import warnings
 from scipy.optimize import least_squares
 from core.constants import DEFAULT_PARAMS
 
-CLOSE_TO_ZERO = np.finfo(np.float128).eps
-CLOSE_TO_ONE = 1 - np.finfo(np.float128).epsneg
-POSITIVE_INF = np.inf
-STATE_KEYS = ('S', 'E', 'F', 'FP')
+_CLOSE_TO_ZERO = np.finfo(np.float128).eps
+_CLOSE_TO_ONE = 1 - np.finfo(np.float128).epsneg
+_POSITIVE_INF = np.inf
+_STATE_VARS = ('S', 'E', 'F', 'FP')
 
 class DynamicalSystem():
     # CONSTRUCTOR
@@ -66,7 +66,7 @@ class DynamicalSystem():
         S_next = np.clip(
             [S * np.exp(gamma_s * (1 - S - E * catchability))],
             np.finfo(np.float128).eps,
-            POSITIVE_INF
+            _POSITIVE_INF
         )[0]
 
         return S_next
@@ -92,8 +92,8 @@ class DynamicalSystem():
         '''
         E_next = np.clip(
             [E * np.exp(gamma_e * (term - cost))],
-            CLOSE_TO_ZERO,
-            POSITIVE_INF
+            _CLOSE_TO_ZERO,
+            _POSITIVE_INF
         )[0]
         
         return E_next
@@ -137,8 +137,8 @@ class DynamicalSystem():
             '''
             F_next = np.clip(
                 [(F * np.exp(delta)) / (1 + F * (np.exp(delta) - 1))],
-                CLOSE_TO_ZERO,
-                CLOSE_TO_ONE
+                _CLOSE_TO_ZERO,
+                _CLOSE_TO_ONE
             )[0]
         if recorded_warnings:
             print(f"Captured {len(recorded_warnings)} warning(s):")
@@ -167,8 +167,8 @@ class DynamicalSystem():
         '''
         FP_next = np.clip(
             [(FP * exp_delta_fp) / (1 + FP * (exp_delta_fp - 1))],
-            CLOSE_TO_ZERO,
-            CLOSE_TO_ONE
+            _CLOSE_TO_ZERO,
+            _CLOSE_TO_ONE
         )[0]
         
         return FP_next
@@ -205,7 +205,7 @@ class DynamicalSystem():
         S_next = np.clip(
             [S * np.exp(gamma_s * (r * (1 - S / K) - q * E))],
             np.finfo(np.float128).eps,
-            POSITIVE_INF
+            _POSITIVE_INF
         )[0]
 
         return S_next
@@ -219,8 +219,8 @@ class DynamicalSystem():
                 
         E_next = np.clip(
             [E * np.exp(gamma_e * (revenue - cost))],
-            CLOSE_TO_ZERO,
-            POSITIVE_INF
+            _CLOSE_TO_ZERO,
+            _POSITIVE_INF
         )[0]
         
         return E_next
@@ -238,8 +238,8 @@ class DynamicalSystem():
         pw = self.wholesale_price()
         delta = gamma_f * (pm - pw)
         
-        F_min = self.params.get('F_min', CLOSE_TO_ZERO)
-        F_max = self.params.get('F_max', CLOSE_TO_ONE)
+        F_min = self.params.get('F_min', _CLOSE_TO_ZERO)
+        F_max = self.params.get('F_max', _CLOSE_TO_ONE)
         return np.clip([F * np.exp(delta) / (1 + F * (np.exp(delta) - 1))], F_min, F_max)[0]
     def p_fraudster_state_dimful(self):
         F = self.state['F']
@@ -254,7 +254,7 @@ class DynamicalSystem():
         gamma_fp = self.params['gamma_fp']
         exp_delta_fp = np.exp(gamma_fp * (F - F_threshold))
         
-        return np.clip([FP * exp_delta_fp / (1 + FP * (exp_delta_fp - 1))], CLOSE_TO_ZERO, CLOSE_TO_ONE)[0]
+        return np.clip([FP * exp_delta_fp / (1 + FP * (exp_delta_fp - 1))], _CLOSE_TO_ZERO, _CLOSE_TO_ONE)[0]
     
     # VARIABLES (dimensionful)
     def catchability(self):
@@ -298,7 +298,7 @@ class DynamicalSystem():
             Reduces risk of numerical imprecisions 
             (and values reaching areas they shouldn't reach).
         '''
-        return np.clip([np.sqrt((1-FP)**e_d / H**e_sm) * gamma_m], CLOSE_TO_ZERO, POSITIVE_INF)[0]
+        return np.clip([np.sqrt((1-FP)**e_d / H**e_sm) * gamma_m], _CLOSE_TO_ZERO, _POSITIVE_INF)[0]
     def wholesale_price(self):
         F = self.state['F']
         pw0 = self.params['pw0']
@@ -423,16 +423,16 @@ class DynamicalSystem():
         
         # Clamping to 
         clamped = np.array([
-            max(state_vec[0], CLOSE_TO_ZERO),              # S > 0
-            max(state_vec[1], CLOSE_TO_ZERO),              # E > 0
-            min(max(state_vec[2], CLOSE_TO_ZERO), CLOSE_TO_ONE),  # 0 < F < 1
-            min(max(state_vec[3], CLOSE_TO_ZERO), CLOSE_TO_ONE),  # 0 < FP < 1
+            max(state_vec[0], _CLOSE_TO_ZERO),              # S > 0
+            max(state_vec[1], _CLOSE_TO_ZERO),              # E > 0
+            min(max(state_vec[2], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < F < 1
+            min(max(state_vec[3], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < FP < 1
         ])
 
         saved = self.state.copy()
         self.state = {
             k: np.float128(v)
-            for k, v in zip(STATE_KEYS, clamped)
+            for k, v in zip(_STATE_VARS, clamped)
         }
         result = self.system_map()
         self.state = saved
@@ -467,13 +467,13 @@ class DynamicalSystem():
         def residual(x):
             return self._evaluate_map_vec(x) - x
 
-        lower = np.array([CLOSE_TO_ZERO, CLOSE_TO_ZERO, CLOSE_TO_ZERO, CLOSE_TO_ZERO])
-        upper = np.array([np.inf,         np.inf,         CLOSE_TO_ONE,  CLOSE_TO_ONE])
+        lower = np.array([_CLOSE_TO_ZERO, _CLOSE_TO_ZERO, _CLOSE_TO_ZERO, _CLOSE_TO_ZERO])
+        upper = np.array([np.inf,         np.inf,         _CLOSE_TO_ONE,  _CLOSE_TO_ONE])
 
         candidates = []
 
         if initial_guess is not None:
-            candidates.append(np.array([float(initial_guess[k]) for k in STATE_KEYS]))
+            candidates.append(np.array([float(initial_guess[k]) for k in _STATE_VARS]))
         else:
             saved = self.state.copy()
             tail_len = max(warmup_steps // 2, 50)
@@ -485,14 +485,14 @@ class DynamicalSystem():
                     'F': result['F'], 'FP': result['FP'],
                 }
                 if _wi >= warmup_steps - tail_len:
-                    orbit.append([float(self.state[k]) for k in STATE_KEYS])
-            x_last = np.array([float(self.state[k]) for k in STATE_KEYS])
+                    orbit.append([float(self.state[k]) for k in _STATE_VARS])
+            x_last = np.array([float(self.state[k]) for k in _STATE_VARS])
             self.state = saved
 
             orbit_arr = np.array(orbit)
             x_mean = orbit_arr.mean(axis=0)
 
-            x_fallback = np.array([float(saved[k]) for k in STATE_KEYS])
+            x_fallback = np.array([float(saved[k]) for k in _STATE_VARS])
             for arr in (x_mean, x_last):
                 arr[~np.isfinite(arr)] = x_fallback[~np.isfinite(arr)]
 
@@ -536,7 +536,7 @@ class DynamicalSystem():
 
         if best_result is None:
             return {
-                'fixed_point': {k: float('nan') for k in STATE_KEYS},
+                'fixed_point': {k: float('nan') for k in _STATE_VARS},
                 'residual_norm': np.inf,
                 'converged': False,
                 'info': None,
@@ -544,7 +544,7 @@ class DynamicalSystem():
 
         x_star = best_result.x
         res_norm = float(np.linalg.norm(residual(x_star)))
-        fp_dict = {k: v for k, v in zip(STATE_KEYS, x_star)}
+        fp_dict = {k: v for k, v in zip(_STATE_VARS, x_star)}
 
         return {
             'fixed_point': fp_dict,
@@ -571,7 +571,7 @@ class DynamicalSystem():
         '''
         if state is None:
             state = self.state
-        x0 = np.array([float(state[k]) for k in STATE_KEYS])
+        x0 = np.array([float(state[k]) for k in _STATE_VARS])
         eps_machine = np.finfo(np.float64).eps
         n = len(x0)
         J = np.zeros((n, n))

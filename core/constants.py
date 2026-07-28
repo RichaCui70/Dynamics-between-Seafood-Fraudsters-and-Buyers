@@ -1,7 +1,3 @@
-_PW0 = DEFAULT_PARAMS['pw0']
-_C0 = DEFAULT_PARAMS['c0']
-_Q0 = DEFAULT_PARAMS['q0']
-
 VAR_COLORS = {
     'S': '#4682B4',
     'E': '#2E8B57', 

@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 from core.System import DynamicalSystem
 
-from core.constants import _PW0, _C0, _Q0, DEFAULT_INIT_STATE, DEFAULT_PARAMS
+from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
 from core.plots import plot_bifurcation, plot_return_maps, plot_ts_with_economics, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
@@ -14,9 +14,9 @@ _ALPHA_HOLD_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
 
 def _blast_params(alpha: float) -> dict:
     return {
-        'q1': float(_Q0 + alpha * 0.33),
-        'pw1': float(_PW0 - alpha * 0.40),
-        'c1': float(_C0 - alpha * 0.80),
+        'q1': float(DEFAULT_PARAMS['q0'] + alpha * 0.33),
+        'pw1': float(DEFAULT_PARAMS['pw0'] - alpha * 0.40),
+        'c1': float(DEFAULT_PARAMS['c0'] - alpha * 0.80),
     }
 
 

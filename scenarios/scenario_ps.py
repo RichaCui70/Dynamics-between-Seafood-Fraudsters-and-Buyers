@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 from core.System import DynamicalSystem
 
-from core.constants import _PW0, _C0, _Q0, DEFAULT_INIT_STATE, DEFAULT_PARAMS
+from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
 from core.plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
@@ -12,14 +12,14 @@ from ._sys_params import sys_params_ui
 _FT_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
 _ALPHA_HOLD_OPTIONS = [0.0, 0.10, 0.15, 0.25, 0.40, 0.55, 0.70, 0.85, 1.00]
 
-_PS_SCALAR = 4.0  # pw1 = _PW0 + alpha * _PS_SCALAR
+_PS_SCALAR = 4.0
 
 
 def _prized_params(alpha: float) -> dict:
     return {
-        'pw1': float(_PW0 + alpha * _PS_SCALAR),
-        'c1': _C0,
-        'q1': _Q0,
+        'pw1': float(DEFAULT_PARAMS['pw0'] + alpha * _PS_SCALAR),
+        'c1': DEFAULT_PARAMS['c0'],
+        'q1': DEFAULT_PARAMS['q0'],
     }
 
 
@@ -278,7 +278,7 @@ def scenario_ps():
             fig = plot_ts_with_economics(
                 _ts_full, t2_A, _vals_full, 'α',
                 f'Prized Seafood — Time Series as α Increases   '
-                f'(c₁=c₀={_C0},  q₁=q₀={_Q0},  F_threshold={ps_ft_A})',
+                f'(c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']},  F_threshold={ps_ft_A})',
             )
             for i, lbl in enumerate(_all_labels):
                 fig.layout.annotations[i].text = lbl
@@ -296,7 +296,7 @@ def scenario_ps():
             fig = plot_ts_with_economics(
                 _ts_full_ft, t2_B, _vals_full_ft, 'F_threshold',
                 f'Prized Seafood — Time Series as F_threshold Increases   '
-                f'(held {hold_tag},  c₁=c₀={_C0},  q₁=q₀={_Q0})',
+                f'(held {hold_tag},  c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']})',
             )
             for i, lbl in enumerate(_ft_labels):
                 fig.layout.annotations[i].text = lbl
@@ -400,7 +400,7 @@ def scenario_ps():
             height=600,
             title_text=(
                 f'Spectral Radius vs α — Fixed-Point Stability   '
-                f'(c₁=c₀={_C0},  q₁=q₀={_Q0},  F_threshold={DEFAULT_PARAMS["F_threshold"]})'
+                f'(c₁=c₀={DEFAULT_PARAMS['c0']},  q₁=q₀={DEFAULT_PARAMS['q0']},  F_threshold={DEFAULT_PARAMS["F_threshold"]})'
             ),
             xaxis_title='Destruction Intensity (α)',
             yaxis_title='Spectral Radius  ρ = max|λᵢ|',

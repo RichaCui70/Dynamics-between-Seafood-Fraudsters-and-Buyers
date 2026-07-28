@@ -5,7 +5,6 @@ from plotly.subplots import make_subplots
 from .constants import VAR_COLORS
 
 HEATMAP_METRICS = ['S̄', 'H̄', 'P̄ᵐ']
-_HEATMAP_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
 
 _LABEL_FONT = dict(color='#2c2c2c', size=18)
 
@@ -240,6 +239,8 @@ _CS_HARVEST = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
 _CS_MARKET_PRICE= [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 # Harvest / Market Price: keep original blue scale
 _CS_OTHERS  = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
+
+_HEATMAP_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
 
 
 def plot_ts_heatmap(ts_dict, param_vals, param_label, active_metrics, burn_frac=0.6, baseline_dict=None):
