@@ -14,7 +14,6 @@ The project has a live Streamlit app: https://dynamics-between-seafood-fraudster
 |------|---------|
 | `System.py` | Core `DynamicalSystem` class — nondimensionalized and dimensionalized model, single-step mapping, time series generation, stability analysis |
 | `app.py` | Streamlit web app |
-| `new_research.py` | Research scenarios — time series, bifurcation diagrams, return maps |
 | `text.py` | Markdown/LaTeX narrative displayed in the Streamlit app |
 | `requirements.txt` | Pinned dependencies |
 
@@ -109,7 +108,7 @@ DEFAULT_PARAMS = {
 | `e_sw`, `e_sm` | Supply elasticities for wholesale and market prices |
 | `pw1`, `c1` | Wholesale price and cost at full fraud — key parameters for prized/protected species and destructive fishing scenarios |
 | `q1` | Catchability at full fraud — higher under blast/cyanide fishing |
-| `alpha`, `beta` | Destruction intensity and EEZ violation intensity (scenario-specific) |
+| `alpha` | Fraudster influence |
 
 ---
 
@@ -118,12 +117,9 @@ DEFAULT_PARAMS = {
 | # | Scenario | Key Parameter | What It Tests |
 |---|----------|---------------|---------------|
 | 1 | Baseline (no fraud) | `r` | Pure S–E bioeconomics; oscillations and chaos |
-| 2 | Prized / protected seafood | `pw1` | Illegal catch commanding a price premium |
-| 3 | Blast / cyanide fishing | `alpha` (destruction) | Higher catchability + lower costs + lower wholesale price |
-| 4 | EEZ non-enforcement | `beta` (violation) | Outside-EEZ access — higher catchability, higher costs |
-| WIP | Buyer dependence | `e_d` | When demand is inelastic to fraud perception, self-correction breaks |
-| WIP | Wholesale supply elasticity | `e_sw` | Price sensitivity to harvest volume and effort dynamics |
-| WIP | Market supply elasticity | `e_sm` | Market price sensitivity to harvest and fraudster incentives |
+| 2 | Prized / protected seafood | Illegal catch commanding a price premium |
+| 3 | Blast / cyanide fishing | Higher catchability + lower costs + lower wholesale price |
+| 4 | EEZ non-enforcement | Outside-EEZ access — higher catchability, higher costs |
 
 ---
 
@@ -153,12 +149,5 @@ The `DynamicalSystem` class has three key methods:
 - All state variables use `np.float128` for numerical precision
 - Plots use matplotlib; the Streamlit app uses the same `DynamicalSystem` class
 - Equations in `text.py` are raw LaTeX strings rendered by Streamlit
-
----
-
-## Current Research Priorities
-
-1. Completing WIP scenarios (buyer dependence, supply elasticities)
-2. Bifurcation diagram refinement across parameter sweeps
-3. Research highlight paper communicating model architecture and real-world applications
-4. Literature review connecting to financial instability / disaster myopia frameworks
+- All variables and functions should use snake_case
+- Be descriptive with variable and function naming: Prioritize meaning over short names (e.g., use elapsed_time_seconds instead of just t or ets)

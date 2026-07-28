@@ -1,7 +1,6 @@
 import streamlit as st
 from text import INTRO
 from scenarios import scenario_baseline, scenario_bf, scenario_ps, scenario_eez
-from hypothesis import hypothesis_tab
 
 st.set_page_config(
     layout="wide",
@@ -11,7 +10,7 @@ st.set_page_config(
 
 section = st.segmented_control(
     "Navigation",
-    ["Introduction", "Scenarios", "Hypothesis"],
+    ["Introduction", "Scenarios"],
     default="Introduction",
     key="nav_section",
     label_visibility="collapsed",
@@ -42,6 +41,3 @@ elif section == "Scenarios":
         scenario_ps()
     elif scenario == "3: EEZ":
         scenario_eez()
-
-elif section == "Hypothesis":
-    hypothesis_tab()

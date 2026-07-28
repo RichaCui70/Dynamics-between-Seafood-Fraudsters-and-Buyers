@@ -1,7 +1,9 @@
-new_research.py
 __pycache__
 .venv
 .vscode
 .cursor
+.claude
 literature
 papers
+hypothesis
+.pytest_cache
