@@ -10,7 +10,7 @@ _STATE_VARS = ('S', 'E', 'F', 'FP')
 
 class DynamicalSystem():
     # CONSTRUCTOR
-    def __init__(self, params, state, type="nondimensionalized"):
+    def __init__(self, params, state, equation_form="nondimensionalized"):
         '''
         Args:
             params (dict): A dictionary of system parameters containing:
@@ -39,14 +39,14 @@ class DynamicalSystem():
                 * E (float128): Fishing effort.
                 * F (float128): Current level of fraud.
                 * FP (float128): Public perception of fraud.
-            type: A string indicating the type of system to be initialized.
+            equation_form: Which equation set to advance.
                 Expected values:
                 * "nondimensionalized": Initializes the system in nondimensionalized form.
                 * "dimensionalized": Initializes the system in dimensionalized form.
         '''
         self._params = {}
         self._state = {}
-        self._type = type
+        self._equation_form = equation_form
         
         self.params = params if params is not None else DEFAULT_PARAMS
         self.state = state
@@ -152,7 +152,7 @@ class DynamicalSystem():
             for w in recorded_warnings:
                 print(f"- Message: {w.message}, Category: {w.category.__name__}")
         return F_next
-    def p_fraudster_state_nondim(self): 
+    def fraud_perception_state_nondim(self): 
         F = self.state['F']
         FP = self.state['FP']
         F_threshold = self.nondim_params['F_threshold']
@@ -188,7 +188,7 @@ class DynamicalSystem():
         return F * (q - 1) + 1
     
     # STATE VARIABLES (dimensionful)
-    def seafood_state_dimful(self):
+    def seafood_state_dimensionalized(self):
         S = self.state['S']
         E = self.state['E']
         r = self.params['r']
@@ -209,7 +209,7 @@ class DynamicalSystem():
         )[0]
 
         return S_next
-    def effort_state_dimful(self):
+    def effort_state_dimensionalized(self):
         S = self.state['S']
         E = self.state['E']
         gamma_e = self.params['gamma_e']
@@ -224,7 +224,7 @@ class DynamicalSystem():
         )[0]
         
         return E_next
-    def fraudster_state_dimful(self):
+    def fraudster_state_dimensionalized(self):
         F = self.state['F']
         
         if F == 1.0:
@@ -234,14 +234,14 @@ class DynamicalSystem():
         
         gamma_f = self.params['gamma_f']
         
-        pm = self.market_price()
-        pw = self.wholesale_price()
-        delta = gamma_f * (pm - pw)
+        market_price = self.market_price()
+        wholesale_price = self.wholesale_price()
+        delta = gamma_f * (market_price - wholesale_price)
         
         F_min = self.params.get('F_min', _CLOSE_TO_ZERO)
         F_max = self.params.get('F_max', _CLOSE_TO_ONE)
         return np.clip([F * np.exp(delta) / (1 + F * (np.exp(delta) - 1))], F_min, F_max)[0]
-    def p_fraudster_state_dimful(self):
+    def fraud_perception_state_dimensionalized(self):
         F = self.state['F']
         FP = self.state['FP']
         
@@ -328,8 +328,8 @@ class DynamicalSystem():
     def system_map(self) -> dict:        
         '''
         Get system's values for the next time step.
-        Only computes the state update matching self.type to avoid
-        calling nondim/dimful functions with incompatible params.
+        Only computes the state update matching self.equation_form to avoid
+        calling nondim/dimensionalized functions with incompatible params.
         '''
         market_price = self.market_price()
         wholesale_price = self.wholesale_price()
@@ -339,16 +339,16 @@ class DynamicalSystem():
         harvest = self.harvest()
         demand = self.demand()
         
-        if self.type == "dimensionalized":
-            S_next = self.seafood_state_dimful()
-            E_next = self.effort_state_dimful()
-            F_next = self.fraudster_state_dimful()
-            FP_next = self.p_fraudster_state_dimful()
+        if self.equation_form == "dimensionalized":
+            S_next = self.seafood_state_dimensionalized()
+            E_next = self.effort_state_dimensionalized()
+            F_next = self.fraudster_state_dimensionalized()
+            FP_next = self.fraud_perception_state_dimensionalized()
         else:
             S_next = self.seafood_state_nondim()
             E_next = self.effort_state_nondim()
             F_next = self.fraudster_state_nondim()
-            FP_next = self.p_fraudster_state_nondim()
+            FP_next = self.fraud_perception_state_nondim()
         
         return {
             'S': S_next,
@@ -364,18 +364,18 @@ class DynamicalSystem():
             'demand': demand,
         }
     
-    def time_series_plot(self, time, title="", x_label="", y_label="", ax=None) -> dict:
+    def generate_time_series(self, num_timesteps, title="", x_label="", y_label="", ax=None) -> dict:
         seafood = np.array(self.state['S'], dtype=np.float128)
         effort = np.array(self.state['E'], dtype=np.float128)
         fraudsters = np.array(self.state['F'], dtype=np.float128)
-        p_fraudsters = np.array(self.state['FP'], dtype=np.float128)
+        fraud_perception = np.array(self.state['FP'], dtype=np.float128)
         harvest_arr = np.array(self.harvest(), dtype=np.float128)
         market_price_arr = np.array(self.market_price(), dtype=np.float128)
         wholesale_price_arr = np.array(self.wholesale_price(), dtype=np.float128)
         revenue_arr = np.array(self.revenue_per_unit_effort(), dtype=np.float128)
         cost_arr = np.array(self.cost_per_unit_effort(), dtype=np.float128)
         
-        for _ in range(time):
+        for _ in range(num_timesteps):
             result = self.system_map()
             self.state = {
                 'S': result['S'], 'E': result['E'],
@@ -385,7 +385,7 @@ class DynamicalSystem():
             seafood = np.append(seafood, result['S'])
             effort = np.append(effort, result['E'])
             fraudsters = np.append(fraudsters, result['F'])
-            p_fraudsters = np.append(p_fraudsters, result['FP'])
+            fraud_perception = np.append(fraud_perception, result['FP'])
             market_price_arr = np.append(market_price_arr, result['market_price'])
             wholesale_price_arr = np.append(wholesale_price_arr, result['wholesale_price'])
             harvest_arr = np.append(harvest_arr, result['harvest'])
@@ -396,7 +396,7 @@ class DynamicalSystem():
             'Seafood': seafood,
             'Effort': effort,
             'Fraudsters': fraudsters,
-            'Perception of Fraud': p_fraudsters,
+            'Perception of Fraud': fraud_perception,
             'Market Price': market_price_arr,
             'Wholesale Price': wholesale_price_arr,
             'Harvest': harvest_arr,
@@ -404,7 +404,7 @@ class DynamicalSystem():
             'Cost per Effort': cost_arr,
         }
 
-    def _evaluate_map_vec(self, state_vec):
+    def _evaluate_map_vector(self, state_vector):
         '''
         Evaluate the 4D map G(x) at an arbitrary state vector without
         permanently mutating self.state.
@@ -416,26 +416,26 @@ class DynamicalSystem():
         price).
 
         Args:
-            state_vec: length-4 array-like [S, E, F, FP]
+            state_vector: length-4 array-like [S, E, F, FP]
         Returns:
             np.ndarray of shape (4,) with [S', E', F', FP']
         '''
         
         # Clamping to 
         clamped = np.array([
-            max(state_vec[0], _CLOSE_TO_ZERO),              # S > 0
-            max(state_vec[1], _CLOSE_TO_ZERO),              # E > 0
-            min(max(state_vec[2], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < F < 1
-            min(max(state_vec[3], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < FP < 1
+            max(state_vector[0], _CLOSE_TO_ZERO),              # S > 0
+            max(state_vector[1], _CLOSE_TO_ZERO),              # E > 0
+            min(max(state_vector[2], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < F < 1
+            min(max(state_vector[3], _CLOSE_TO_ZERO), _CLOSE_TO_ONE),  # 0 < FP < 1
         ])
 
-        saved = self.state.copy()
+        saved_state = self.state.copy()
         self.state = {
             k: np.float128(v)
             for k, v in zip(_STATE_VARS, clamped)
         }
         result = self.system_map()
-        self.state = saved
+        self.state = saved_state
         return np.array([
             float(result['S']), float(result['E']),
             float(result['F']), float(result['FP']),
@@ -465,7 +465,7 @@ class DynamicalSystem():
                 'info'        : least_squares result object
         '''
         def residual(x):
-            return self._evaluate_map_vec(x) - x
+            return self._evaluate_map_vector(x) - x
 
         lower = np.array([_CLOSE_TO_ZERO, _CLOSE_TO_ZERO, _CLOSE_TO_ZERO, _CLOSE_TO_ZERO])
         upper = np.array([np.inf,         np.inf,         _CLOSE_TO_ONE,  _CLOSE_TO_ONE])
@@ -476,15 +476,15 @@ class DynamicalSystem():
             candidates.append(np.array([float(initial_guess[k]) for k in _STATE_VARS]))
         else:
             saved = self.state.copy()
-            tail_len = max(warmup_steps // 2, 50)
+            orbit_tail_length = max(warmup_steps // 2, 50)
             orbit = []
-            for _wi in range(warmup_steps):
+            for warmup_index in range(warmup_steps):
                 result = self.system_map()
                 self.state = {
                     'S': result['S'], 'E': result['E'],
                     'F': result['F'], 'FP': result['FP'],
                 }
-                if _wi >= warmup_steps - tail_len:
+                if warmup_index >= warmup_steps - orbit_tail_length:
                     orbit.append([float(self.state[k]) for k in _STATE_VARS])
             x_last = np.array([float(self.state[k]) for k in _STATE_VARS])
             self.state = saved
@@ -544,10 +544,10 @@ class DynamicalSystem():
 
         x_star = best_result.x
         res_norm = float(np.linalg.norm(residual(x_star)))
-        fp_dict = {k: v for k, v in zip(_STATE_VARS, x_star)}
+        fixed_point = {k: v for k, v in zip(_STATE_VARS, x_star)}
 
         return {
-            'fixed_point': fp_dict,
+            'fixed_point': fixed_point,
             'residual_norm': res_norm,
             'converged': res_norm < tol,
             'info': best_result,
@@ -573,18 +573,20 @@ class DynamicalSystem():
             state = self.state
         x0 = np.array([float(state[k]) for k in _STATE_VARS])
         eps_machine = np.finfo(np.float64).eps
-        n = len(x0)
-        J = np.zeros((n, n))
+        num_state_vars = len(x0)
+        jacobian_matrix = np.zeros((num_state_vars, num_state_vars))
 
-        for i in range(n):
-            hi = h if h is not None else (eps_machine ** (1.0 / 3.0)) * max(1.0, abs(x0[i]))
-            x_fwd = x0.copy()
-            x_bwd = x0.copy()
-            x_fwd[i] += hi
-            x_bwd[i] -= hi
-            J[:, i] = (self._evaluate_map_vec(x_fwd) - self._evaluate_map_vec(x_bwd)) / (2.0 * hi)
+        for i in range(num_state_vars):
+            step_size = h if h is not None else (eps_machine ** (1.0 / 3.0)) * max(1.0, abs(x0[i]))
+            state_forward = x0.copy()
+            state_backward = x0.copy()
+            state_forward[i] += step_size
+            state_backward[i] -= step_size
+            jacobian_matrix[:, i] = (
+                self._evaluate_map_vector(state_forward) - self._evaluate_map_vector(state_backward)
+            ) / (2.0 * step_size)
 
-        return J
+        return jacobian_matrix
 
     def stability_analysis(self, initial_guess=None, warmup_steps=500, tol=1e-10):
         '''
@@ -610,55 +612,55 @@ class DynamicalSystem():
                 'stable'         : bool — True iff spectral_radius < 1
                 'classification' : str
         '''
-        fp_result = self.find_fixed_point(
+        fixed_point_result = self.find_fixed_point(
             initial_guess=initial_guess,
             warmup_steps=warmup_steps,
             tol=tol,
         )
-        fp = fp_result['fixed_point']
+        fixed_point = fixed_point_result['fixed_point']
 
-        J = self.jacobian(state=fp)
+        jacobian_matrix = self.jacobian(state=fixed_point)
 
-        if not np.all(np.isfinite(J)):
+        if not np.all(np.isfinite(jacobian_matrix)):
             return {
-                'fixed_point': fp,
-                'converged': fp_result['converged'],
-                'residual_norm': fp_result['residual_norm'],
-                'jacobian': J,
+                'fixed_point': fixed_point,
+                'converged': fixed_point_result['converged'],
+                'residual_norm': fixed_point_result['residual_norm'],
+                'jacobian': jacobian_matrix,
                 'eigenvalues': np.array([np.inf] * 4),
                 'spectral_radius': np.inf,
                 'stable': False,
                 'classification': 'degenerate (Jacobian contains NaN/Inf)',
             }
 
-        eigenvalues = np.linalg.eig(J)[0]
-        moduli = np.abs(eigenvalues)
-        rho = float(np.max(moduli))
+        eigenvalues = np.linalg.eig(jacobian_matrix)[0]
+        eigenvalue_moduli = np.abs(eigenvalues)
+        spectral_radius = float(np.max(eigenvalue_moduli))
 
-        margin = 1e-6
-        has_complex = any(abs(ev.imag) > 1e-10 for ev in eigenvalues)
+        stability_margin = 1e-6
+        has_complex_eigenvalues = any(abs(eigenvalue.imag) > 1e-10 for eigenvalue in eigenvalues)
 
-        if not fp_result['converged']:
+        if not fixed_point_result['converged']:
             classification = "no fixed point found (solver did not converge)"
-            stable = False
-        elif rho < 1.0 - margin:
-            classification = "stable spiral" if has_complex else "stable node"
-            stable = True
-        elif rho > 1.0 + margin:
-            classification = "unstable spiral" if has_complex else "unstable node"
-            stable = False
+            is_stable = False
+        elif spectral_radius < 1.0 - stability_margin:
+            classification = "stable spiral" if has_complex_eigenvalues else "stable node"
+            is_stable = True
+        elif spectral_radius > 1.0 + stability_margin:
+            classification = "unstable spiral" if has_complex_eigenvalues else "unstable node"
+            is_stable = False
         else:
             classification = "Neimark-Sacker boundary (marginal)"
-            stable = rho < 1.0
+            is_stable = spectral_radius < 1.0
 
         return {
-            'fixed_point': fp,
-            'converged': fp_result['converged'],
-            'residual_norm': fp_result['residual_norm'],
-            'jacobian': J,
+            'fixed_point': fixed_point,
+            'converged': fixed_point_result['converged'],
+            'residual_norm': fixed_point_result['residual_norm'],
+            'jacobian': jacobian_matrix,
             'eigenvalues': eigenvalues,
-            'spectral_radius': rho,
-            'stable': stable,
+            'spectral_radius': spectral_radius,
+            'stable': is_stable,
             'classification': classification,
         }
 
@@ -678,8 +680,8 @@ class DynamicalSystem():
         self._params = value
         
     @property
-    def type(self):
-        return self._type
+    def equation_form(self):
+        return self._equation_form
         
     @property
     def nondim_params(self):

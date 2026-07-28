@@ -19,7 +19,7 @@ def baseline_time_series(growth_rate: float, simulation_timesteps: int,
     params['r'] = growth_rate
     state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
-    time_series = system.time_series_plot(time=simulation_timesteps)
+    time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
@@ -37,7 +37,7 @@ def baseline_bifurcation(growth_rate_min: float, growth_rate_max: float, resolut
         params['r'] = float(growth_rate)
         state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
-        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
         effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
         attractor_length = len(seafood_attractor)

@@ -7,6 +7,7 @@ Shared numerical model and plotting primitives used by the Streamlit app and sce
 | [`System.py`](System.py) | Discrete-time dynamical system (`DynamicalSystem`) |
 | [`constants.py`](constants.py) | Default parameters, initial state, plot colors |
 | [`plots.py`](plots.py) | Reusable Plotly figure builders |
+| [`metrics.py`](metrics.py) | Summary-metric helpers (stub) |
 | [`__init__.py`](__init__.py) | Package marker (empty) |
 
 ---
@@ -18,20 +19,20 @@ Core 4D map for seafood biomass `S`, fishing effort `E`, fraudster share `F`, an
 ### Construction
 
 ```python
-DynamicalSystem(params, state, type="nondimensionalized" | "dimensionalized")
+DynamicalSystem(params, state, equation_form="nondimensionalized" | "dimensionalized")
 ```
 
 - `params` — dict of model coefficients (falls back to `DEFAULT_PARAMS`)
 - `state` — `{'S', 'E', 'F', 'FP'}` (stored as `np.float128`)
-- `type` — which equation set `system_map()` advances
+- `equation_form` — which equation set `system_map()` advances
 
 ### State update & observables
 
 | Method | Purpose |
 |--------|---------|
 | `system_map()` | One-step map + contemporaneous observables (prices, harvest, costs, …) |
-| `time_series_plot(time)` | Iterate `time` steps; returns arrays for S, E, F, FP, prices, harvest, revenue/cost per effort |
-| `seafood_state_*` / `effort_state_*` / `fraudster_state_*` / `p_fraudster_state_*` | Next-state equations (nondim and dimful variants) |
+| `generate_time_series(num_timesteps)` | Iterate `num_timesteps` steps; returns arrays for S, E, F, FP, prices, harvest, revenue/cost per effort |
+| `seafood_state_*` / `effort_state_*` / `fraudster_state_*` / `fraud_perception_state_*` | Next-state equations (`_nondim` and `_dimensionalized` variants) |
 | `catchability()`, `harvest()`, `market_price()`, `wholesale_price()`, … | Fraud-modulated bioeconomic quantities |
 
 Dimensionalized form is what the Streamlit scenarios use. Nondimensionalized form keeps the same structure with scaled parameters (`nondim_params`).
@@ -64,11 +65,17 @@ Plotly helpers shared by blast, prized-seafood, and EEZ tabs. Baseline builds it
 
 | Function | Figure |
 |----------|--------|
-| `plot_4var_ts(...)` | Multi-column time series: row 1 = S / E / H; row 2 = F / FP |
-| `plot_ts_with_economics(...)` | Same plus market & wholesale prices (optional revenue/cost per effort row) |
+| `plot_four_variable_time_series(...)` | Multi-column time series: row 1 = S / E / H; row 2 = F / FP |
+| `plot_time_series_with_economics(...)` | Same plus market & wholesale prices (optional revenue/cost per effort row) |
 | `plot_bifurcation(...)` | 2×2 attractor scatter of S*, E*, F*, FP* vs a sweep parameter |
-| `plot_return_maps(...)` | Poincaré plots: `x(t)` vs `x(t+1)` for S and E (post-burn) |
-| `plot_ts_heatmap(...)` | One-row heatmaps of post-burn mean metrics (`S̄`, `H̄`, `P̄ᵐ`) as % change vs a baseline (or vs row mean) |
+| `plot_poincare_maps(...)` | Poincaré plots: `x(t)` vs `x(t+1)` for S and E (post-burn-in) |
+| `plot_time_series_heatmap(...)` | One-row heatmaps of post-burn mean metrics (`S̄`, `H̄`, `P̄ᵐ`) as % change vs a baseline (or vs row mean) |
 | `HEATMAP_METRICS` | `['S̄', 'H̄', 'P̄ᵐ']` — selectable heatmap rows in the UI |
 
-Colors come from `VAR_COLORS`. Heatmap scales are diverging (green = better than baseline for stock/harvest; market-price polarity is inverted).
+Colors come from `VAR_COLORS`. Heatmap scales are diverging (`SEAFOOD_COLORSCALE` / `HARVEST_COLORSCALE`: green = better stock/harvest; `MARKET_PRICE_COLORSCALE` inverts polarity).
+
+---
+
+## `metrics.py`
+
+Stub for trajectory summary metrics (`compute_summary_metrics`). Not yet wired into the Streamlit UI.

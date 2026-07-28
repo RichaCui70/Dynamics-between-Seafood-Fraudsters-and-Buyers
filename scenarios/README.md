@@ -105,13 +105,13 @@ Together they answer: *how bad does fraud get as intensity rises?* and *does rai
 
 - `α` drives illegal catch premium: `pw1 = pw0 + α·4`; gear unchanged (`c1 = c0`, `q1 = q0`).
 - Same dual-sweep tabs as blast, plus **Stability** (`prized_spectral_sweep`).
-- Time series use `plot_ts_with_economics` (prices matter when premium rises).
+- Time series use `plot_time_series_with_economics` (prices matter when premium rises).
 - Cached helpers: `prized_time_series`, `prized_bifurcation`, `prized_baseline_time_series`, etc.
 
 ### `scenario_eez.py` — Non-enforcement of EEZ
 
 - Outside-EEZ access: `q1 = q0 + α·0.23` ↑, `c1 = c0 + α·1.10` ↑; `pw1` stays at default.
-- Same dual-sweep tabs as blast; time series use `plot_4var_ts` (no extra price rows).
+- Same dual-sweep tabs as blast; time series use `plot_four_variable_time_series` (no extra price rows).
 - Cached helpers: `eez_time_series`, `eez_bifurcation`, `eez_baseline_time_series`, etc.
 
 ---

@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from core.System import DynamicalSystem
 
 from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
-from core.plots import plot_4var_ts, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
+from core.plots import plot_four_variable_time_series, plot_bifurcation, plot_poincare_maps, plot_time_series_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import system_parameters_ui
 
@@ -30,7 +30,7 @@ def eez_time_series(alpha: float, f_threshold: float, simulation_timesteps: int,
     params['F_threshold'] = f_threshold
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
-    time_series = system.time_series_plot(time=simulation_timesteps)
+    time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
@@ -45,7 +45,7 @@ def eez_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
     params['F_threshold'] = f_threshold
     state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
-    time_series = system.time_series_plot(time=simulation_timesteps)
+    time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
@@ -65,7 +65,7 @@ def eez_bifurcation(alpha_min: float, alpha_max: float, resolution: int,
         params['F_threshold'] = f_threshold
         state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
-        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
         effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
         fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
@@ -98,7 +98,7 @@ def eez_bifurcation_vs_f_threshold(alpha_held: float, f_threshold_min: float,
         params['F_threshold'] = float(f_threshold)
         state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
-        time_series = system.time_series_plot(time=bifurcation_timesteps)
+        time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
         effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
         fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
@@ -127,7 +127,7 @@ def eez_baseline(simulation_timesteps: int, system_param_overrides: tuple = ()) 
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
-    time_series = system.time_series_plot(time=simulation_timesteps)
+    time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     burn_in_steps = int(simulation_timesteps * 0.6)
     return {
         'Seafood': float(np.mean(time_series['Seafood'][burn_in_steps:])),
@@ -149,7 +149,7 @@ def eez_baseline_time_series(simulation_timesteps: int,
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
-    time_series = system.time_series_plot(time=simulation_timesteps)
+    time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
 
 
@@ -281,7 +281,7 @@ def scenario_eez():
             time_series_with_baseline = {'Baseline': baseline_time_series, **time_series_by_alpha}
             param_values_with_baseline = ['Baseline'] + selected_alphas
             column_labels = ['Baseline (α=0, F=FP=0)'] + alpha_column_labels
-            fig = plot_4var_ts(
+            fig = plot_four_variable_time_series(
                 time_series_with_baseline, time_axis_alpha, param_values_with_baseline, 'α',
                 f'EEZ Non-Enforcement — Time Series by Violation Intensity   '
                 f'(F_threshold={f_threshold_for_alpha_sweep}  |  q₁↑  c₁↑  |  '
@@ -291,7 +291,7 @@ def scenario_eez():
                 fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
             if heatmap_metrics:
-                heatmap_figs = plot_ts_heatmap(
+                heatmap_figs = plot_time_series_heatmap(
                     time_series_with_baseline, param_values_with_baseline, 'α',
                     heatmap_metrics, baseline_dict=baseline_means,
                 )
@@ -309,7 +309,7 @@ def scenario_eez():
             f_threshold_column_labels = (
                 ['Baseline (F=FP=0)'] + [str(f_threshold) for f_threshold in selected_f_thresholds]
             )
-            fig = plot_4var_ts(
+            fig = plot_four_variable_time_series(
                 time_series_ft_with_baseline, time_axis_ft,
                 f_threshold_values_with_baseline, 'F_threshold',
                 f'EEZ Non-Enforcement — Time Series as F_threshold Increases   '
@@ -319,7 +319,7 @@ def scenario_eez():
                 fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
             if heatmap_metrics:
-                heatmap_figs = plot_ts_heatmap(
+                heatmap_figs = plot_time_series_heatmap(
                     time_series_ft_with_baseline, f_threshold_values_with_baseline,
                     'F_threshold', heatmap_metrics, baseline_dict=baseline_means,
                 )
@@ -391,7 +391,7 @@ def scenario_eez():
             time_series_with_baseline = {'Baseline': baseline_time_series, **time_series_by_alpha}
             param_values_with_baseline = ['Baseline'] + selected_alphas
             column_labels = ['Baseline (α=0, F=FP=0)'] + alpha_column_labels
-            fig = plot_return_maps(
+            fig = plot_poincare_maps(
                 time_series_with_baseline, param_values_with_baseline, 'α', burn_in_steps_alpha,
             )
             for index, label in enumerate(column_labels):
@@ -408,7 +408,7 @@ def scenario_eez():
             f_threshold_column_labels = (
                 ['Baseline (F=FP=0)'] + [str(f_threshold) for f_threshold in selected_f_thresholds]
             )
-            fig = plot_return_maps(
+            fig = plot_poincare_maps(
                 time_series_ft_with_baseline, f_threshold_values_with_baseline,
                 'F_threshold', burn_in_steps_ft,
             )

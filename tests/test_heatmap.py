@@ -1,5 +1,5 @@
 """
-Test suite for plot_ts_heatmap — verifying the prompt requirements:
+Test suite for plot_time_series_heatmap — verifying the prompt requirements:
 
   1.  Returns a list of Plotly Figures (one per active metric) when inputs are valid.
   2.  Y-label of each figure = the corresponding metric pill (S̄, H̄, P̄ᵐ).
@@ -9,7 +9,7 @@ Test suite for plot_ts_heatmap — verifying the prompt requirements:
   6.  Column COUNT matches param_vals count (proxy for "same-width" alignment).
   7.  Cell values are signed % deviation from row mean (format: +X.X% / -X.X%).
   8.  Averages use post-burn data (burn_in_fraction=0.6 by default).
-  9.  Seafood uses red→white→green colorscale; Harvest & Pm use blue colorscale.
+  9.  Seafood/Harvest use red→white→green; market price polarity is inverted.
  10.  Per-metric symmetric normalisation: z colour values in [0, 1] with 0%→0.5.
  11.  Metric display order follows HEATMAP_METRICS canonical order.
  12.  Edge cases: empty metrics → None, empty params → None, single column/row.
@@ -24,7 +24,13 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import plotly.graph_objects as go
-from core.plots import plot_ts_heatmap, HEATMAP_METRICS, _CS_SEAFOOD, _CS_OTHERS
+from core.plots import (
+    plot_time_series_heatmap,
+    HEATMAP_METRICS,
+    SEAFOOD_COLORSCALE,
+    HARVEST_COLORSCALE,
+    MARKET_PRICE_COLORSCALE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +54,7 @@ _PCT_RE = re.compile(r'^[+-]\d+\.\d+%$')
 
 
 def _get_figs(ts_dict=None, param_vals=None, label='pw₁', metrics=None):
-    return plot_ts_heatmap(
+    return plot_time_series_heatmap(
         ts_dict  if ts_dict    is not None else TS_DICT,
         param_vals if param_vals is not None else PARAM_VALS,
         label,
@@ -176,7 +182,7 @@ def test_higher_avg_gives_positive_pct():
         1.0: {'Seafood': np.full(400, 0.3), 'Harvest': np.full(400, 0.3), 'Market Price': np.full(400, 0.3)},
         2.0: {'Seafood': np.full(400, 0.7), 'Harvest': np.full(400, 0.7), 'Market Price': np.full(400, 0.7)},
     }
-    figs = plot_ts_heatmap(controlled, [1.0, 2.0], 'x', ['S̄'])
+    figs = plot_time_series_heatmap(controlled, [1.0, 2.0], 'x', ['S̄'])
     texts = figs[0].data[0].text[0]  # [pct_for_1.0, pct_for_2.0]
     assert texts[0].startswith('-'), f"Lower avg (pv=1.0) should be negative, got {texts[0]}"
     assert texts[1].startswith('+'), f"Higher avg (pv=2.0) should be positive, got {texts[1]}"
@@ -198,7 +204,7 @@ def test_burn_fraction_applied():
         1.0: {'Seafood': biased, 'Harvest': biased, 'Market Price': biased},
         2.0: {'Seafood': const,  'Harvest': const,  'Market Price': const},
     }
-    figs = plot_ts_heatmap(biased_dict, [1.0, 2.0], 'x', ['S̄'])
+    figs = plot_time_series_heatmap(biased_dict, [1.0, 2.0], 'x', ['S̄'])
     pct_low = figs[0].data[0].text[0][0]  # pv=1.0
     assert pct_low.startswith('-'), (
         f"pv=1.0 post-burn avg ≈ 0.1 should be below mean — got {pct_low}"
@@ -217,7 +223,7 @@ def test_custom_burn_fraction_zero():
         1.0: {'Seafood': biased, 'Harvest': biased, 'Market Price': biased},
         2.0: {'Seafood': const,  'Harvest': const,  'Market Price': const},
     }
-    figs = plot_ts_heatmap(
+    figs = plot_time_series_heatmap(
         biased_dict, [1.0, 2.0], 'x', ['S̄'], burn_in_fraction=0.0,
     )
     pct_high = figs[0].data[0].text[0][0]  # pv=1.0 — now has very high full-series avg
@@ -227,7 +233,7 @@ def test_custom_burn_fraction_zero():
 
 
 # ---------------------------------------------------------------------------
-# Requirement 9 — Seafood uses red→white→green; others use blue
+# Requirement 9 — Seafood/Harvest red↔green; market price polarity inverted
 # ---------------------------------------------------------------------------
 
 def _cs_colors(cs):
@@ -238,19 +244,19 @@ def _cs_colors(cs):
 def test_seafood_uses_green_red_colorscale():
     figs = _get_figs(metrics=['S̄'])
     cs = figs[0].data[0].colorscale
-    assert _cs_colors(cs) == _cs_colors(_CS_SEAFOOD), f"Seafood colorscale wrong: {cs}"
+    assert _cs_colors(cs) == _cs_colors(SEAFOOD_COLORSCALE), f"Seafood colorscale wrong: {cs}"
 
 
-def test_harvest_uses_blue_colorscale():
+def test_harvest_uses_green_red_colorscale():
     figs = _get_figs(metrics=['H̄'])
     cs = figs[0].data[0].colorscale
-    assert _cs_colors(cs) == _cs_colors(_CS_OTHERS), f"Harvest colorscale wrong: {cs}"
+    assert _cs_colors(cs) == _cs_colors(HARVEST_COLORSCALE), f"Harvest colorscale wrong: {cs}"
 
 
-def test_market_price_uses_blue_colorscale():
+def test_market_price_uses_inverted_colorscale():
     figs = _get_figs(metrics=['P̄ᵐ'])
     cs = figs[0].data[0].colorscale
-    assert _cs_colors(cs) == _cs_colors(_CS_OTHERS), f"Market Price colorscale wrong: {cs}"
+    assert _cs_colors(cs) == _cs_colors(MARKET_PRICE_COLORSCALE), f"Market Price colorscale wrong: {cs}"
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +274,7 @@ def test_zero_deviation_maps_to_half():
     """When all param values have the same post-burn avg, every z must equal 0.5."""
     const_dict = {pv: {k: np.full(400, 0.5) for k in ['Seafood', 'Harvest', 'Market Price']}
                   for pv in PARAM_VALS}
-    figs = plot_ts_heatmap(const_dict, PARAM_VALS, 'x', HEATMAP_METRICS)
+    figs = plot_time_series_heatmap(const_dict, PARAM_VALS, 'x', HEATMAP_METRICS)
     for fig in figs:
         for v in fig.data[0].z[0]:
             assert abs(v - 0.5) < 1e-9, f"Expected 0.5 for zero deviation, got {v}"
@@ -280,7 +286,7 @@ def test_positive_deviation_above_half():
         1.0: {'Seafood': np.full(400, 0.2), 'Harvest': np.full(400, 0.2), 'Market Price': np.full(400, 0.2)},
         2.0: {'Seafood': np.full(400, 0.8), 'Harvest': np.full(400, 0.8), 'Market Price': np.full(400, 0.8)},
     }
-    figs = plot_ts_heatmap(controlled, [1.0, 2.0], 'x', HEATMAP_METRICS)
+    figs = plot_time_series_heatmap(controlled, [1.0, 2.0], 'x', HEATMAP_METRICS)
     for fig in figs:
         z = fig.data[0].z[0]
         assert z[0] < 0.5, f"Lower param (pv=1.0) should map below 0.5, got {z[0]}"
@@ -304,7 +310,7 @@ def test_metric_order_follows_canonical_order():
 
 def test_single_param_value():
     single = {PARAM_VALS[0]: _make_ts()}
-    figs = plot_ts_heatmap(single, [PARAM_VALS[0]], 'pw₁', HEATMAP_METRICS)
+    figs = plot_time_series_heatmap(single, [PARAM_VALS[0]], 'pw₁', HEATMAP_METRICS)
     assert figs is not None
     for fig in figs:
         assert len(fig.data[0].x) == 1
