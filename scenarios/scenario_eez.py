@@ -1,10 +1,10 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from System import DynamicalSystem, DEFAULT_PARAMS
+from core.System import DynamicalSystem, DEFAULT_PARAMS
 
-from .constants import _C0, _Q0, FULL_INIT
-from .plots import plot_4var_ts, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
+from core.constants import _C0, _Q0, FULL_INIT
+from core.plots import plot_4var_ts, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
 

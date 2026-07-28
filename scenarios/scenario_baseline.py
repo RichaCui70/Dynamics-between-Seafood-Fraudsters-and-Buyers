@@ -2,9 +2,9 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from System import DynamicalSystem, DEFAULT_PARAMS
+from core.System import DynamicalSystem, DEFAULT_PARAMS
 
-from .constants import S1_COLORS, S1_NO_FRAUD, HARVEST_COLOR
+from core.constants import S1_COLORS, S1_NO_FRAUD, HARVEST_COLOR
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
 

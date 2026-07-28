@@ -1,4 +1,4 @@
-from System import DEFAULT_PARAMS
+from core.System import DEFAULT_PARAMS
 
 _PW0 = DEFAULT_PARAMS['pw0']
 _C0 = DEFAULT_PARAMS['c0']
