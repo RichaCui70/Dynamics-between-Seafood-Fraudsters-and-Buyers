@@ -132,7 +132,8 @@ If the fixed-point solver did not converge (residual above tolerance), the analy
 **Example:**
 
 ```python
-from core.System import DynamicalSystem, DEFAULT_PARAMS
+from core.System import DynamicalSystem
+from core.constants import DEFAULT_PARAMS
 import numpy as np
 
 params = DEFAULT_PARAMS.copy()

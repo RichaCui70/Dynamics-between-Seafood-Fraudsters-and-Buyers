@@ -2,15 +2,14 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .constants import COLORS4, ECON_COLORS, HARVEST_COLOR
+from .constants import VAR_COLORS
 
 HEATMAP_METRICS = ['S̄', 'H̄', 'P̄ᵐ']
 _HEATMAP_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
 
 _LABEL_FONT = dict(color='#2c2c2c', size=18)
 
-
-def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4):
+def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=VAR_COLORS):
     _N = len(param_vals)
     fig = make_subplots(
         rows=2, cols=_N,
@@ -37,7 +36,7 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Harvest'], mode='lines',
-            line=dict(color=HARVEST_COLOR, width=1.5),
+            line=dict(color=colors['Harvest'], width=1.5),
             name='Harvest (H)', legendgroup='H', showlegend=show,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
@@ -68,7 +67,7 @@ def plot_4var_ts(ts_dict, t_arr, param_vals, param_label, title, colors=COLORS4)
 
 
 def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
-                           colors=COLORS4, econ_colors=ECON_COLORS,
+                           colors=VAR_COLORS, VAR_COLORS=VAR_COLORS,
                            show_per_effort=False):
     """Like plot_4var_ts but with extra rows for economic variables:
     Row 1: S / E
@@ -103,7 +102,7 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Harvest'], mode='lines',
-            line=dict(color=HARVEST_COLOR, width=1.5),
+            line=dict(color=colors['Harvest'], width=1.5),
             name='Harvest (H)', legendgroup='H', showlegend=show,
         ), row=1, col=col)
         fig.add_trace(go.Scatter(
@@ -118,23 +117,23 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
         ), row=2, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Market Price'], mode='lines',
-            line=dict(color=econ_colors['Pm'], width=1.5),
+            line=dict(color=VAR_COLORS['Pm'], width=1.5),
             name='Market Price (Pₘ)', legendgroup='Pm', showlegend=show,
         ), row=3, col=col)
         fig.add_trace(go.Scatter(
             x=t_arr, y=d['Wholesale Price'], mode='lines',
-            line=dict(color=econ_colors['Pw'], width=1.5),
+            line=dict(color=VAR_COLORS['Pw'], width=1.5),
             name='Wholesale Price (Pᵥ)', legendgroup='Pw', showlegend=show,
         ), row=3, col=col)
         if show_per_effort:
             fig.add_trace(go.Scatter(
                 x=t_arr, y=d['Revenue per Effofrt'], mode='lines',
-                line=dict(color=econ_colors['Rev'], width=1.5),
+                line=dict(color=VAR_COLORS['Rev'], width=1.5),
                 name='Revenue / Effort', legendgroup='Rev', showlegend=show,
             ), row=4, col=col)
             fig.add_trace(go.Scatter(
                 x=t_arr, y=d['Cost per Effort'], mode='lines',
-                line=dict(color=econ_colors['Cost'], width=1.5),
+                line=dict(color=VAR_COLORS['Cost'], width=1.5),
                 name='Cost / Effort', legendgroup='Cost', showlegend=show,
             ), row=4, col=col)
 
@@ -160,7 +159,7 @@ def plot_ts_with_economics(ts_dict, t_arr, param_vals, param_label, title,
 
 
 def plot_bifurcation(x_data, s_data, e_data, f_data, fp_data, xlabel, title,
-                     vline_x=None, vline_label=None, colors=COLORS4):
+                     vline_x=None, vline_label=None, colors=VAR_COLORS):
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=['Seafood S*', 'Effort E*', 'Fraudsters F*', 'Perception FP*'],
@@ -198,7 +197,7 @@ def plot_bifurcation(x_data, s_data, e_data, f_data, fp_data, xlabel, title,
     return fig
 
 
-def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=COLORS4):
+def plot_return_maps(ts_dict, param_vals, param_label, burn, colors=VAR_COLORS):
     _N = len(param_vals)
     fig = make_subplots(
         rows=2, cols=_N,

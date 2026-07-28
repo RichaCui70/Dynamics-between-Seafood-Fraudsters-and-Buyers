@@ -1,9 +1,9 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from core.System import DynamicalSystem, DEFAULT_PARAMS
+from core.System import DynamicalSystem
 
-from core.constants import _PW0, _C0, _Q0, FULL_INIT
+from core.constants import _PW0, _C0, _Q0, DEFAULT_INIT_STATE, DEFAULT_PARAMS
 from core.plots import plot_4var_ts, plot_ts_with_economics, plot_bifurcation, plot_return_maps, plot_ts_heatmap, HEATMAP_METRICS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
@@ -31,7 +31,7 @@ def ps_time_series(alpha_val: float, ft_val: float, sim_time: int,
         p.update(dict(sys_params))
     p.update(_prized_params(alpha_val))
     p['F_threshold'] = ft_val
-    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
     ts = sys.time_series_plot(time=sim_time)
     return {k: v.astype(np.float64) for k, v in ts.items()}
@@ -50,7 +50,7 @@ def ps_bifurcation(a_min: float, a_max: float, resolution: int,
             p.update(dict(sys_params))
         p.update(_prized_params(float(av)))
         p['F_threshold'] = ft_val
-        state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+        state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
         ts = sys.time_series_plot(time=bif_time)
         s_att = ts['Seafood'][burn:].astype(np.float64)
@@ -74,7 +74,7 @@ def ps_time_series_ft(alpha_hold: float, ft_val: float, sim_time: int,
         p.update(dict(sys_params))
     p.update(_prized_params(alpha_hold))
     p['F_threshold'] = ft_val
-    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
     ts = sys.time_series_plot(time=sim_time)
     return {k: v.astype(np.float64) for k, v in ts.items()}
@@ -94,7 +94,7 @@ def ps_bifurcation_ft(alpha_hold: float, ft_min: float, ft_max: float,
         p.update({
             **_prized_params(alpha_hold), 'F_threshold': float(ft),
         })
-        state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+        state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
         ts = sys.time_series_plot(time=bif_time)
         s_att = ts['Seafood'][burn:].astype(np.float64)
@@ -120,7 +120,7 @@ def ps_spectral_sweep(a_min: float, a_max: float, resolution: int,
         if sys_params:
             p.update(dict(sys_params))
         p.update(_prized_params(float(av)))
-        state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+        state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
         result = sys.stability_analysis()
         rho_vals[i] = result['spectral_radius']
@@ -135,7 +135,7 @@ def ps_baseline(sim_time: int, sys_params: tuple = ()) -> dict:
         p.update(dict(sys_params))
     p.update(_prized_params(0.0))
     p.update({'F_threshold': 0.5})
-    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     sys = DynamicalSystem(p, state, "dimensionalized")
@@ -156,7 +156,7 @@ def ps_baseline_ts(sim_time: int, sys_params: tuple = ()) -> dict:
         p.update(dict(sys_params))
     p.update(_prized_params(0.0))
     p.update({'F_threshold': 0.5})
-    state = {k: np.float128(v) for k, v in FULL_INIT.items()}
+    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     sys = DynamicalSystem(p, state, "dimensionalized")

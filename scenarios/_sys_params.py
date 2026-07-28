@@ -1,5 +1,5 @@
 import streamlit as st
-from core.System import DEFAULT_PARAMS
+from core.constants import DEFAULT_PARAMS
 
 _GROUPS = [
     ("Response speeds", [

@@ -2,12 +2,13 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from core.System import DynamicalSystem, DEFAULT_PARAMS
+from core.System import DynamicalSystem
 
-from core.constants import S1_COLORS, S1_NO_FRAUD, HARVEST_COLOR
+from core.constants import VAR_COLORS, DEFAULT_PARAMS
 from ._status import scenario_header, status_indicator
 from ._sys_params import sys_params_ui
 
+NO_FRAUD_INIT_STATE = {'S': 0.6, 'E': 0.3, 'F': 0.0, 'FP': 0.0}
 
 @st.cache_data(show_spinner=False)
 def baseline_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) -> dict:
@@ -15,7 +16,7 @@ def baseline_time_series(r_val: float, sim_time: int, sys_params: tuple = ()) ->
     if sys_params:
         p.update(dict(sys_params))
     p['r'] = r_val
-    state = {k: np.float128(v) for k, v in S1_NO_FRAUD.items()}
+    state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
     sys = DynamicalSystem(p, state, "dimensionalized")
     ts = sys.time_series_plot(time=sim_time)
     return {k: v.astype(np.float64) for k, v in ts.items()}
@@ -33,7 +34,7 @@ def baseline_bifurcation(r_min: float, r_max: float, resolution: int,
         if sys_params:
             p.update(dict(sys_params))
         p['r'] = float(rv)
-        state = {k: np.float128(v) for k, v in S1_NO_FRAUD.items()}
+        state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
         sys = DynamicalSystem(p, state, "dimensionalized")
         ts = sys.time_series_plot(time=bif_time)
         s_att = ts['Seafood'][burn:].astype(np.float64)
@@ -95,17 +96,17 @@ def scenario_baseline():
             d = ts1[rv]
             fig.add_trace(go.Scatter(
                 x=t1, y=d['Seafood'], mode='lines',
-                line=dict(color=S1_COLORS['S'], width=1.5),
+                line=dict(color=VAR_COLORS['S'], width=1.5),
                 name='Seafood (S)', legendgroup='S', showlegend=(col == 1),
             ), row=1, col=col)
             fig.add_trace(go.Scatter(
                 x=t1, y=d['Harvest'], mode='lines',
-                line=dict(color=HARVEST_COLOR, width=1.5),
+                line=dict(color=VAR_COLORS['Harvest'], width=1.5),
                 name='Harvest (H)', legendgroup='H', showlegend=(col == 1),
             ), row=1, col=col)
             fig.add_trace(go.Scatter(
                 x=t1, y=d['Effort'], mode='lines',
-                line=dict(color=S1_COLORS['E'], width=1.5),
+                line=dict(color=VAR_COLORS['E'], width=1.5),
                 name='Effort (E)', legendgroup='E', showlegend=(col == 1),
             ), row=2, col=col)
         fig.update_yaxes(title_text='S / H', row=1, col=1)
@@ -134,12 +135,12 @@ def scenario_baseline():
         )
         fig.add_trace(go.Scattergl(
             x=br_r, y=br_S, mode='markers',
-            marker=dict(color=S1_COLORS['S'], size=2, opacity=0.4),
+            marker=dict(color=VAR_COLORS['S'], size=2, opacity=0.4),
             showlegend=False,
         ), row=1, col=1)
         fig.add_trace(go.Scattergl(
             x=br_r, y=br_E, mode='markers',
-            marker=dict(color=S1_COLORS['E'], size=2, opacity=0.4),
+            marker=dict(color=VAR_COLORS['E'], size=2, opacity=0.4),
             showlegend=False,
         ), row=1, col=2)
         _def_r = DEFAULT_PARAMS['r']
@@ -169,7 +170,7 @@ def scenario_baseline():
         for col, rv in enumerate(baseline_r_vals, 1):
             d = ts1[rv]
             for row, (var, clr) in enumerate([
-                ('Seafood', S1_COLORS['S']), ('Effort', S1_COLORS['E']),
+                ('Seafood', VAR_COLORS['S']), ('Effort', VAR_COLORS['E']),
             ], 1):
                 x = d[var]
                 x_t, x_tp1 = x[_burn:-1], x[_burn + 1:]
