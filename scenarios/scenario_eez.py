@@ -5,6 +5,7 @@ from core.System import DynamicalSystem
 
 from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
 from core.plots import plot_four_variable_time_series, plot_bifurcation, plot_poincare_maps, plot_time_series_heatmap, HEATMAP_METRICS
+from core.metrics import build_heatmap_display_rows, market_price_params_from_overrides
 from ._status import scenario_header, status_indicator
 from ._sys_params import system_parameters_ui
 
@@ -275,7 +276,12 @@ def scenario_eez():
             "Heatmap rows", HEATMAP_METRICS, default=HEATMAP_METRICS,
             selection_mode="multi", key="eez_hm_m",
         )
-        st.caption("Heatmap: % change vs. baseline (no fraud, no fraud perception, no EEZ violation)")
+        st.caption(
+            "Heatmap: S̄/H̄/P̄ᵐ = % change vs baseline; "
+            "φ_FP/φ_H = Shapley contribution as % of baseline P̄ᵐ "
+            "(no fraud, no fraud perception, no EEZ violation)"
+        )
+        gamma_m, e_d, e_sm = market_price_params_from_overrides(system_param_overrides)
         subtab_vs_alpha, subtab_vs_f_threshold = st.tabs(["vs α", "vs F_threshold"])
         with subtab_vs_alpha:
             time_series_with_baseline = {'Baseline': baseline_time_series, **time_series_by_alpha}
@@ -291,9 +297,14 @@ def scenario_eez():
                 fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
             if heatmap_metrics:
+                percent_by_metric = build_heatmap_display_rows(
+                    time_series_with_baseline, param_values_with_baseline,
+                    gamma_m=gamma_m, e_d=e_d, e_sm=e_sm,
+                    baseline_means=baseline_means,
+                )
                 heatmap_figs = plot_time_series_heatmap(
-                    time_series_with_baseline, param_values_with_baseline, 'α',
-                    heatmap_metrics, baseline_dict=baseline_means,
+                    percent_by_metric, param_values_with_baseline, 'α',
+                    heatmap_metrics,
                 )
                 if heatmap_figs:
                     for heatmap_fig in heatmap_figs:
@@ -319,9 +330,14 @@ def scenario_eez():
                 fig.layout.annotations[index].text = label
             st.plotly_chart(fig, width='stretch')
             if heatmap_metrics:
-                heatmap_figs = plot_time_series_heatmap(
+                percent_by_metric = build_heatmap_display_rows(
                     time_series_ft_with_baseline, f_threshold_values_with_baseline,
-                    'F_threshold', heatmap_metrics, baseline_dict=baseline_means,
+                    gamma_m=gamma_m, e_d=e_d, e_sm=e_sm,
+                    baseline_means=baseline_means,
+                )
+                heatmap_figs = plot_time_series_heatmap(
+                    percent_by_metric, f_threshold_values_with_baseline,
+                    'F_threshold', heatmap_metrics,
                 )
                 if heatmap_figs:
                     for heatmap_fig in heatmap_figs:

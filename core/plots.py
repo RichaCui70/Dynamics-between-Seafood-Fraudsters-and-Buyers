@@ -1,21 +1,21 @@
-import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from .constants import VAR_COLORS
 
-HEATMAP_METRICS = ['S̄', 'H̄', 'P̄ᵐ']
+HEATMAP_METRICS = ['S̄', 'H̄', 'P̄ᵐ', 'φ_FP', 'φ_H']
 
 _LABEL_FONT = dict(color='#2c2c2c', size=18)
-
-# Seafood / harvest: negative % = red (bad), positive % = green (good)
-SEAFOOD_COLORSCALE = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
-HARVEST_COLORSCALE = [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']]
-# Market price polarity inverted: higher price vs baseline = red
 MARKET_PRICE_COLORSCALE = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 DEFAULT_DIVERGING_COLORSCALE = [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']]
 
-_HEATMAP_SERIES_KEY = {'S̄': 'Seafood', 'H̄': 'Harvest', 'P̄ᵐ': 'Market Price'}
+_HEATMAP_COLORSCALE = {
+    'S̄': [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']],
+    'H̄': [[0.0, '#DC143C'], [0.5, '#FFFFFF'], [1.0, '#228B22']],
+    'P̄ᵐ': [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']],
+    'φ_FP': [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']],
+    'φ_H': [[0.0, '#228B22'], [0.5, '#FFFFFF'], [1.0, '#DC143C']],
+}
 
 
 def plot_four_variable_time_series(time_series_by_param, time_axis, param_values,
@@ -250,18 +250,16 @@ def plot_poincare_maps(time_series_by_param, param_values, param_label,
     return fig
 
 
-def plot_time_series_heatmap(time_series_by_param, param_values, param_label,
-                             active_metrics, burn_in_fraction=0.6,
-                             baseline_dict=None):
-    """One figure per active metric, stacked below the time series.
+def plot_time_series_heatmap(percent_by_metric, param_values, param_label,
+                             active_metrics):
+    """One figure per active metric from precomputed percent cell values.
 
-    If baseline_dict is provided, cell values show % change from baseline.
-    Otherwise, shows signed % deviation from the row mean (within-scenario variation).
+    ``percent_by_metric`` maps each metric name to a list of percents aligned
+    with ``param_values`` (from ``core.metrics.build_heatmap_display_rows``).
 
-    Cell coloring (diverging scale):
-    - Green: exceeds baseline (or row mean)
-    - White: equals baseline (or row mean)
-    - Red: falls below baseline (or row mean)
+    Cell coloring (diverging scale, ±100% clamped):
+    - S̄ / H̄: green = above baseline, red = below
+    - P̄ᵐ / φ_FP / φ_H: red = above baseline (or positive price contribution)
     """
     metrics_in_order = [m for m in HEATMAP_METRICS if m in active_metrics]
     if not metrics_in_order or not param_values:
@@ -271,46 +269,20 @@ def plot_time_series_heatmap(time_series_by_param, param_values, param_label,
     figures = []
 
     for metric in metrics_in_order:
-        series_key = _HEATMAP_SERIES_KEY[metric]
-
-        post_burn_means = []
-        for param_value in param_values:
-            series = time_series_by_param[param_value][series_key]
-            burn_in_steps = int(len(series) * burn_in_fraction)
-            post_burn_means.append(float(np.mean(series[burn_in_steps:])))
-
-        if baseline_dict and series_key in baseline_dict:
-            baseline_value = baseline_dict[series_key]
-            if baseline_value != 0:
-                percent_changes = [
-                    (value - baseline_value) / abs(baseline_value) * 100
-                    for value in post_burn_means
-                ]
-            else:
-                percent_changes = [0.0] * len(post_burn_means)
-        else:
-            row_mean = float(np.mean(post_burn_means)) or 1.0
-            percent_changes = [
-                (value - row_mean) / abs(row_mean) * 100
-                for value in post_burn_means
-            ]
+        percent_changes = list(percent_by_metric[metric])
+        if len(percent_changes) != len(param_values):
+            raise ValueError(
+                f"percent_by_metric[{metric!r}] length {len(percent_changes)} "
+                f"!= len(param_values) {len(param_values)}"
+            )
 
         cell_text = [f"{percent:+.1f}%" for percent in percent_changes]
-
         # Fixed ±100% scale: -100% → 0.0, 0% → 0.5, +100% → 1.0; clamp beyond ±100%
         normalized_z = [
             max(0.0, min(1.0, (percent + 100) / 200))
             for percent in percent_changes
         ]
-
-        if metric == 'S̄':
-            colorscale = SEAFOOD_COLORSCALE
-        elif metric == 'H̄':
-            colorscale = HARVEST_COLORSCALE
-        elif metric == 'P̄ᵐ':
-            colorscale = MARKET_PRICE_COLORSCALE
-        else:
-            colorscale = DEFAULT_DIVERGING_COLORSCALE
+        colorscale = _HEATMAP_COLORSCALE.get(metric, DEFAULT_DIVERGING_COLORSCALE)
 
         fig = go.Figure(data=go.Heatmap(
             z=[normalized_z],

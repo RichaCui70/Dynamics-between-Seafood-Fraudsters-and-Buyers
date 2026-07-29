@@ -45,9 +45,14 @@ Fraud scenarios (BF, PS, EEZ) share the same tab layout. Baseline is S–E only.
 
 ### Heatmaps (under time series — BF / PS / EEZ)
 
-One-row Plotly heatmaps for post-burn means of `S̄`, `H̄`, `P̄ᵐ` (toggle with pills). Cells are **% change vs the no-fraud baseline**, not a 2D α×F̂ grid. Separate heatmaps appear under the **vs α** and **vs F_threshold** sweeps.
+One-row Plotly heatmaps for post-burn metrics `S̄`, `H̄`, `P̄ᵐ`, `φ_FP`, `φ_H` (toggle with pills). Metrics are computed in `core.metrics`; the plot layer only renders.
 
-**Scientific role:** compact summary of welfare / stock / price impact relative to the honest baseline along each 1D sweep.
+- **`S̄` / `H̄` / `P̄ᵐ`:** % change vs the no-fraud baseline
+- **`φ_FP` / `φ_H`:** per-timestep Shapley contributions of fraud perception and harvest to market price (averaged over post-burn), shown as % of baseline `P̄ᵐ`. Preferentially `φ_FP + φ_H ≈` the `P̄ᵐ` cell (same % of baseline scale).
+
+Not a 2D α×F̂ grid — separate heatmaps under the **vs α** and **vs F_threshold** sweeps.
+
+**Scientific role:** compact summary of welfare / stock / price impact relative to the honest baseline, plus how much of the price gap is attributed to awareness vs harvest.
 
 ### Bifurcation diagrams
 

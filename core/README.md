@@ -7,7 +7,7 @@ Shared numerical model and plotting primitives used by the Streamlit app and sce
 | [`System.py`](System.py) | Discrete-time dynamical system (`DynamicalSystem`) |
 | [`constants.py`](constants.py) | Default parameters, initial state, plot colors |
 | [`plots.py`](plots.py) | Reusable Plotly figure builders |
-| [`metrics.py`](metrics.py) | Summary-metric helpers (stub) |
+| [`metrics.py`](metrics.py) | Summary metrics + Shapley φ_FP / φ_H for heatmaps |
 | [`__init__.py`](__init__.py) | Package marker (empty) |
 
 ---
@@ -69,13 +69,21 @@ Plotly helpers shared by blast, prized-seafood, and EEZ tabs. Baseline builds it
 | `plot_time_series_with_economics(...)` | Same plus market & wholesale prices (optional revenue/cost per effort row) |
 | `plot_bifurcation(...)` | 2×2 attractor scatter of S*, E*, F*, FP* vs a sweep parameter |
 | `plot_poincare_maps(...)` | Poincaré plots: `x(t)` vs `x(t+1)` for S and E (post-burn-in) |
-| `plot_time_series_heatmap(...)` | One-row heatmaps of post-burn mean metrics (`S̄`, `H̄`, `P̄ᵐ`) as % change vs a baseline (or vs row mean) |
-| `HEATMAP_METRICS` | `['S̄', 'H̄', 'P̄ᵐ']` — selectable heatmap rows in the UI |
+| `plot_time_series_heatmap(...)` | One-row heatmaps from precomputed percent rows (`S̄`, `H̄`, `P̄ᵐ`, `φ_FP`, `φ_H`) |
+| `HEATMAP_METRICS` | `['S̄', 'H̄', 'P̄ᵐ', 'φ_FP', 'φ_H']` — selectable heatmap rows in the UI |
 
-Colors come from `VAR_COLORS`. Heatmap scales are diverging (`SEAFOOD_COLORSCALE` / `HARVEST_COLORSCALE`: green = better stock/harvest; `MARKET_PRICE_COLORSCALE` inverts polarity).
+Colors come from `VAR_COLORS`. Heatmap scales are diverging (`SEAFOOD_COLORSCALE` / `HARVEST_COLORSCALE`: green = better stock/harvest; `MARKET_PRICE_COLORSCALE` inverts polarity for `P̄ᵐ` / `φ_FP` / `φ_H`).
 
 ---
 
 ## `metrics.py`
 
-Stub for trajectory summary metrics (`compute_summary_metrics`). Not yet wired into the Streamlit UI.
+Trajectory summary metrics used by scenario heatmaps.
+
+| Export | Purpose |
+|--------|---------|
+| `compute_summary_metrics(...)` | Post-burn `S̄`, `H̄`, `P̄ᵐ` plus **per-timestep** Shapley `φ_FP`, `φ_H` (averaged; price units) for `Pᵐ(FP, H)` vs a reference |
+| `build_heatmap_display_rows(...)` | From time series + baseline means → display percents for all five heatmap rows |
+| `heatmap_display_percents(...)` | `S̄`/`H̄`/`P̄ᵐ` = % change vs baseline; `φ_FP`/`φ_H` = φ as % of baseline `P̄ᵐ` |
+
+Shapley reference: `FP_ref = 0`, `H_ref` = no-fraud baseline harvest. Per-timestep then average so `φ_FP + φ_H = mean_t Pᵐ(FP_t, H_t) − Pᵐ(ref)`, which tracks the observed average price gap (unlike Shapley-of-means).
