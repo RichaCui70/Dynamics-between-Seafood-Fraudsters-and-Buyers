@@ -26,6 +26,10 @@ class DynamicalSystem():
                 * e_sm (float128): [Add description for e_sm].
                 * K (float128): Carrying capacity of the seafood population.
                 * F_threshold (float128): Threshold limit for fraud.
+                * F_min (float128): Minimum fraudster share.
+                * F_max (float128): Maximum fraudster share.
+                * FP_min (float128): Minimum fraud perception.
+                * FP_max (float128): Maximum fraud perception.
                 * q0 (float128): Catchability coefficient when no fraudsters are present.
                 * q1 (float128): Catchability coefficient when fraudsters are present.
                 * r (float128): Intrinsic growth rate.
@@ -130,15 +134,18 @@ class DynamicalSystem():
             
             delta = gamma_f * (price_market - price_wholesale)
             
+            F_min = np.maximum(_CLOSE_TO_ZERO, self.nondim_params['F_min'])
+            F_max = np.minimum(_CLOSE_TO_ONE, self.nondim_params['F_max'])
+            
             '''
-            Artifically clip between 0 and 1 (noninclusive).
+            Artifically clip between F_min and F_max (within (0, 1)).
             Reduces risk of numerical imprecisions 
             (and values reaching areas they shouldn't reach).
             '''
             F_next = np.clip(
                 [(F * np.exp(delta)) / (1 + F * (np.exp(delta) - 1))],
-                _CLOSE_TO_ZERO,
-                _CLOSE_TO_ONE
+                F_min,
+                F_max
             )[0]
         if recorded_warnings:
             print(f"Captured {len(recorded_warnings)} warning(s):")
@@ -158,17 +165,25 @@ class DynamicalSystem():
         F_threshold = self.nondim_params['F_threshold']
         gamma_fp = self.nondim_params['gamma_fp']
         
+        if FP == 1.0:
+            return 1.0
+        if FP == 0.0:
+            return 0.0
+        
         exp_delta_fp = np.exp(gamma_fp * (F - F_threshold))
 
+        FP_min = np.maximum(_CLOSE_TO_ZERO, self.nondim_params['FP_min'])
+        FP_max = np.minimum(_CLOSE_TO_ONE, self.nondim_params['FP_max'])
+
         '''
-            Artifically clip between 0 and 1 (noninclusive).
+            Artifically clip between FP_min and FP_max (within (0, 1)).
             Reduces risk of numerical imprecisions 
             (and values reaching areas they shouldn't reach).
         '''
         FP_next = np.clip(
             [(FP * exp_delta_fp) / (1 + FP * (exp_delta_fp - 1))],
-            _CLOSE_TO_ZERO,
-            _CLOSE_TO_ONE
+            FP_min,
+            FP_max
         )[0]
         
         return FP_next
@@ -238,8 +253,9 @@ class DynamicalSystem():
         wholesale_price = self.wholesale_price()
         delta = gamma_f * (market_price - wholesale_price)
         
-        F_min = self.params.get('F_min', _CLOSE_TO_ZERO)
-        F_max = self.params.get('F_max', _CLOSE_TO_ONE)
+        F_min = np.maximum(_CLOSE_TO_ZERO, self.params['F_min'])
+        F_max = np.minimum(_CLOSE_TO_ONE, self.params['F_max'])
+        
         return np.clip([F * np.exp(delta) / (1 + F * (np.exp(delta) - 1))], F_min, F_max)[0]
     def fraud_perception_state_dimensionalized(self):
         F = self.state['F']
@@ -254,7 +270,10 @@ class DynamicalSystem():
         gamma_fp = self.params['gamma_fp']
         exp_delta_fp = np.exp(gamma_fp * (F - F_threshold))
         
-        return np.clip([FP * exp_delta_fp / (1 + FP * (exp_delta_fp - 1))], _CLOSE_TO_ZERO, _CLOSE_TO_ONE)[0]
+        FP_min = np.maximum(_CLOSE_TO_ZERO, self.params['FP_min'])
+        FP_max = np.minimum(_CLOSE_TO_ONE, self.params['FP_max'])
+        
+        return np.clip([FP * exp_delta_fp / (1 + FP * (exp_delta_fp - 1))], FP_min, FP_max)[0]
     
     # VARIABLES (dimensionful)
     def catchability(self):
@@ -695,6 +714,10 @@ class DynamicalSystem():
             'gamma_fp': params['gamma_fp'],
             'e_sm': params['e_sm'], 'e_sw': params['e_sw'], 'e_d': params['e_d'],
             'F_threshold': params['F_threshold'],
+            'F_min': params['F_min'],
+            'F_max': params['F_max'],
+            'FP_min': params['FP_min'],
+            'FP_max': params['FP_max'],
             'mu': (params['q0'] * params['pw0'] * params['K']) / params['c0'],
             'q': params['q1'] / params['q0'],
             'pw': params['pw1'] / params['pw0'],

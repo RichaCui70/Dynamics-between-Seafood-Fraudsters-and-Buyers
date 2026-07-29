@@ -35,7 +35,7 @@ DynamicalSystem(params, state, equation_form="nondimensionalized" | "dimensional
 | `seafood_state_*` / `effort_state_*` / `fraudster_state_*` / `fraud_perception_state_*` | Next-state equations (`_nondim` and `_dimensionalized` variants) |
 | `catchability()`, `harvest()`, `market_price()`, `wholesale_price()`, … | Fraud-modulated bioeconomic quantities |
 
-Dimensionalized form is what the Streamlit scenarios use. Nondimensionalized form keeps the same structure with scaled parameters (`nondim_params`).
+Dimensionalized form is what the Streamlit scenarios use. Nondimensionalized form keeps the same structure with scaled parameters (`nondim_params`). Bounds `F_min`/`F_max` and `FP_min`/`FP_max` are already dimensionless and pass through unchanged; both equation forms clip `F` and `FP` updates to those intervals (within `(0, 1)`).
 
 ### Stability analysis
 

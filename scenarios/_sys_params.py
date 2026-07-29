@@ -16,6 +16,8 @@ PARAM_GROUPS = [
         ('e_d',     'εd  (demand elasticity)',          0.0001,  3.0,  0.05),
         ('e_sw',    'εsw (wholesale supply elast.)',    0.1,  2.0,  0.05),
         ('e_sm',    'εsm (market supply elast.)',       0.1,  2.0,  0.05),
+        ('FP_min',      'FP_min (min fraud perception)',       0.0,  1.0,  0.05),
+        ('FP_max',      'FP_max (max fraud perception)',       0.0,  1.0,  0.05),
     ]),
     ("Fraud economics", [
         ('q0',          'q₀  (catchability, no fraud)',    0.01, 0.5,  0.01),
