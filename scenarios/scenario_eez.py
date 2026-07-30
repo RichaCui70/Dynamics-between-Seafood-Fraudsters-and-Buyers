@@ -3,11 +3,11 @@ import numpy as np
 import plotly.graph_objects as go
 from core.System import DynamicalSystem
 
-from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
+from core.constants import DEFAULT_PARAMS
 from core.plots import plot_four_variable_time_series, plot_bifurcation, plot_poincare_maps, plot_time_series_heatmap, HEATMAP_METRICS
 from core.metrics import build_heatmap_display_rows, market_price_params_from_overrides
 from ._status import scenario_header, status_indicator
-from ._sys_params import system_parameters_ui
+from ._sys_params import initial_state_from_overrides, system_parameters_ui
 
 
 F_THRESHOLD_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
@@ -29,7 +29,8 @@ def eez_time_series(alpha: float, f_threshold: float, simulation_timesteps: int,
         params.update(dict(system_param_overrides))
     params.update(_eez_params(alpha))
     params['F_threshold'] = f_threshold
-    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+    initial_state = initial_state_from_overrides(system_param_overrides)
+    state = {k: np.float128(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -44,7 +45,8 @@ def eez_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
         params.update(dict(system_param_overrides))
     params.update(_eez_params(alpha_held))
     params['F_threshold'] = f_threshold
-    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+    initial_state = initial_state_from_overrides(system_param_overrides)
+    state = {k: np.float128(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -64,7 +66,8 @@ def eez_bifurcation(alpha_min: float, alpha_max: float, resolution: int,
             params.update(dict(system_param_overrides))
         params.update(_eez_params(float(alpha)))
         params['F_threshold'] = f_threshold
-        state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+        initial_state = initial_state_from_overrides(system_param_overrides)
+        state = {k: np.float128(v) for k, v in initial_state.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
         time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
@@ -97,7 +100,8 @@ def eez_bifurcation_vs_f_threshold(alpha_held: float, f_threshold_min: float,
             params.update(dict(system_param_overrides))
         params.update(_eez_params(alpha_held))
         params['F_threshold'] = float(f_threshold)
-        state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+        initial_state = initial_state_from_overrides(system_param_overrides)
+        state = {k: np.float128(v) for k, v in initial_state.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
         time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
@@ -124,7 +128,8 @@ def eez_baseline(simulation_timesteps: int, system_param_overrides: tuple = ()) 
         params.update(dict(system_param_overrides))
     params.update(_eez_params(0.0))
     params.update({'F_threshold': 0.5})
-    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+    initial_state = initial_state_from_overrides(system_param_overrides)
+    state = {k: np.float128(v) for k, v in initial_state.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
@@ -146,7 +151,8 @@ def eez_baseline_time_series(simulation_timesteps: int,
         params.update(dict(system_param_overrides))
     params.update(_eez_params(0.0))
     params.update({'F_threshold': 0.5})
-    state = {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()}
+    initial_state = initial_state_from_overrides(system_param_overrides)
+    state = {k: np.float128(v) for k, v in initial_state.items()}
     state['F'] = np.float128(0.0)
     state['FP'] = np.float128(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")

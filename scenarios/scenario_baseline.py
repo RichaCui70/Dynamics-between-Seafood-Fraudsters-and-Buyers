@@ -6,7 +6,7 @@ from core.System import DynamicalSystem
 
 from core.constants import VAR_COLORS, DEFAULT_PARAMS
 from ._status import scenario_header, status_indicator
-from ._sys_params import system_parameters_ui
+from ._sys_params import initial_state_from_overrides, system_parameters_ui
 
 NO_FRAUD_INIT_STATE = {'S': 0.6, 'E': 0.3, 'F': 0.0, 'FP': 0.0}
 
@@ -17,7 +17,10 @@ def baseline_time_series(growth_rate: float, simulation_timesteps: int,
     if system_param_overrides:
         params.update(dict(system_param_overrides))
     params['r'] = growth_rate
-    state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
+    initial_state = initial_state_from_overrides(
+        system_param_overrides, NO_FRAUD_INIT_STATE,
+    )
+    state = {k: np.float128(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -35,7 +38,10 @@ def baseline_bifurcation(growth_rate_min: float, growth_rate_max: float, resolut
         if system_param_overrides:
             params.update(dict(system_param_overrides))
         params['r'] = float(growth_rate)
-        state = {k: np.float128(v) for k, v in NO_FRAUD_INIT_STATE.items()}
+        initial_state = initial_state_from_overrides(
+            system_param_overrides, NO_FRAUD_INIT_STATE,
+        )
+        state = {k: np.float128(v) for k, v in initial_state.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
         time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
@@ -75,7 +81,9 @@ def scenario_baseline():
             key="baseline_rv",
         )
 
-    system_param_overrides = system_parameters_ui("baseline")
+    system_param_overrides = system_parameters_ui(
+        "baseline", initial_state_defaults=NO_FRAUD_INIT_STATE,
+    )
 
     if not selected_growth_rates:
         st.warning("Select at least one *r* value.")

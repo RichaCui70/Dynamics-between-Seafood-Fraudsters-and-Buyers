@@ -1,5 +1,5 @@
 import streamlit as st
-from core.constants import DEFAULT_PARAMS
+from core.constants import DEFAULT_INIT_STATE, DEFAULT_PARAMS
 
 PARAM_GROUPS = [
     ("Response speeds", [
@@ -30,14 +30,67 @@ PARAM_GROUPS = [
         ('F_min',       'F_min (min fraudster share)',       0.0,  1.0,  0.05),
         ('F_max',       'F_max (max fraudster share)',       0.0,  1.0,  0.05),
     ]),
+    ("Starting values", [
+        ('S0',  'S₀  (starting stock)',             0.0, 1.0, 0.01),
+        ('E0',  'E₀  (starting effort)',            0.0, 5.0, 0.01),
+        ('F0',  'F₀  (starting fraudsters)',        0.0, 1.0, 0.01),
+        ('FP0', 'FP₀ (starting fraud perception)',  0.0, 1.0, 0.01),
+    ]),
 ]
 
 
-def system_parameters_ui(prefix: str, exclude: set = frozenset()) -> tuple:
-    """Render System Parameters expander; return sorted (key, val) tuple for cache keying."""
+def initial_state_from_overrides(
+    system_param_overrides: tuple,
+    defaults: dict | None = None,
+) -> dict:
+    """Build a simulation state from starting-value controls.
+
+    Args:
+        system_param_overrides: Cached key-value pairs returned by
+            ``system_parameters_ui``.
+        defaults: Scenario-specific starting values. Uses
+            ``DEFAULT_INIT_STATE`` when omitted.
+
+    Returns:
+        Initial state keyed by ``S``, ``E``, ``F``, and ``FP``.
+    """
+    initial_state = dict(DEFAULT_INIT_STATE if defaults is None else defaults)
+    override_values = dict(system_param_overrides)
+    for state_key in initial_state:
+        initial_state[state_key] = override_values.get(
+            f"{state_key}0", initial_state[state_key],
+        )
+    return initial_state
+
+
+def system_parameters_ui(
+    prefix: str,
+    exclude: set = frozenset(),
+    initial_state_defaults: dict | None = None,
+) -> tuple:
+    """Render system controls and return cacheable override values.
+
+    Args:
+        prefix: Unique Streamlit widget-key prefix for the scenario.
+        exclude: Parameter keys controlled elsewhere by the scenario.
+        initial_state_defaults: Scenario-specific starting values. Uses
+            ``DEFAULT_INIT_STATE`` when omitted.
+
+    Returns:
+        Sorted ``(key, value)`` pairs for parameter and starting-state
+        overrides.
+    """
     param_values = {}
+    starting_values = dict(
+        DEFAULT_INIT_STATE if initial_state_defaults is None
+        else initial_state_defaults
+    )
+    default_values = {
+        **DEFAULT_PARAMS,
+        **{f"{state_key}0": value for state_key, value in starting_values.items()},
+    }
     with st.expander("System Parameters", expanded=False):
-        columns = st.columns(3, gap="large")
+        columns = st.columns(4, gap="large")
         for column, (group_name, params) in zip(columns, PARAM_GROUPS):
             with column:
                 st.markdown(f"**{group_name}**")
@@ -45,7 +98,7 @@ def system_parameters_ui(prefix: str, exclude: set = frozenset()) -> tuple:
                     if key in exclude:
                         continue
                     param_values[key] = st.slider(
-                        label, slider_min, slider_max, float(DEFAULT_PARAMS[key]), slider_step,
+                        label, slider_min, slider_max, float(default_values[key]), slider_step,
                         key=f"{prefix}_{key}",
                     )
     return tuple(sorted(param_values.items()))

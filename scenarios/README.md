@@ -20,7 +20,9 @@ Plot builders live in [`core/plots.py`](../core/plots.py) (not under `scenarios/
 
 ### `_sys_params.py` — `system_parameters_ui(prefix, exclude=…)`
 
-Expander with sliders for response speeds, market elasticities, and fraud economics (defaults from `DEFAULT_PARAMS`). Returns a sorted `(key, val)` tuple used as a Streamlit cache key (`system_param_overrides`). Scenarios `exclude` parameters that `α` already drives (e.g. blast excludes `q1`, `pw1`, `c1`).
+Expander with sliders for response speeds, market elasticities, fraud economics, and the starting state (`S₀`, `E₀`, `F₀`, `FP₀`). Parameter defaults come from `DEFAULT_PARAMS`; starting-state defaults come from `DEFAULT_INIT_STATE` unless a scenario supplies its own values. Returns a sorted `(key, val)` tuple used as a Streamlit cache key (`system_param_overrides`). Scenarios `exclude` parameters that `α` already drives (e.g. blast excludes `q1`, `pw1`, `c1`).
+
+`initial_state_from_overrides(...)` converts the cached starting-value controls back to the state keys expected by `DynamicalSystem`. All time-series, bifurcation, Poincaré, and stability calculations use that state. No-fraud baseline runs preserve their scenario-specific `F₀ = FP₀ = 0` values.
 
 ### `_status.py`
 
