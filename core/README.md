@@ -6,6 +6,7 @@ Shared numerical model and plotting primitives used by the Streamlit app and sce
 |------|------|
 | [`System.py`](System.py) | Discrete-time dynamical system (`DynamicalSystem`) |
 | [`constants.py`](constants.py) | Default parameters, initial state, plot colors |
+| [`continuation.py`](continuation.py) | Pseudo-arclength continuation of fixed points |
 | [`plots.py`](plots.py) | Reusable Plotly figure builders |
 | [`metrics.py`](metrics.py) | Summary metrics + Shapley φ_FP / φ_H for heatmaps |
 | [`__init__.py`](__init__.py) | Package marker (empty) |
@@ -47,6 +48,18 @@ Dimensionalized form is what the Streamlit scenarios use. Nondimensionalized for
 
 ---
 
+## `continuation.py`
+
+Pseudo-arclength continuation of equilibria for the discrete map \(G(x;\mu)=x\).
+
+| Export | Purpose |
+|--------|---------|
+| `continue_fixed_point(params_at, param_range, …)` | Trace a connected fixed-point branch along μ with a scaled null-space tangent + Newton corrector; returns state arrays, `ρ(μ)`, stability flags, and early-termination diagnostics |
+
+Unlike orbit-diagram bifurcations (post-burn attractor samples), continuation returns an **equilibrium branch** in trace order (folds keep their polyline shape). Linear algebra uses `float64` (matching `jacobian` / `find_fixed_point`). Coordinates are diagonally scaled so state and parameter contribute fairly to arclength. Follows a single seed branch — coexisting / disconnected fixed points are not discovered.
+
+---
+
 ## `constants.py`
 
 | Export | Contents |
@@ -67,7 +80,7 @@ Plotly helpers shared by blast, prized-seafood, and EEZ tabs. Baseline builds it
 |----------|--------|
 | `plot_four_variable_time_series(...)` | Multi-column time series: row 1 = S / E / H; row 2 = F / FP |
 | `plot_time_series_with_economics(...)` | Same plus market & wholesale prices (optional revenue/cost per effort row) |
-| `plot_bifurcation(...)` | 2×2 attractor scatter of S*, E*, F*, FP* vs a sweep parameter |
+| `plot_bifurcation(...)` | 2×2 attractor scatter of S*, E*, F*, FP* vs a sweep parameter; optional black solid/dotted fixed-point continuation overlay |
 | `plot_poincare_maps(...)` | Poincaré plots: `x(t)` vs `x(t+1)` for S and E (post-burn-in) |
 | `plot_time_series_heatmap(...)` | One-row heatmaps from precomputed percent rows (`S̄`, `H̄`, `P̄ᵐ`, `φ_FP`, `φ_H`) |
 | `HEATMAP_METRICS` | `['S̄', 'H̄', 'P̄ᵐ', 'φ_FP', 'φ_H']` — selectable heatmap rows in the UI |

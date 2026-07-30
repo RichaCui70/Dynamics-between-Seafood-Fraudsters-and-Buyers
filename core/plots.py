@@ -1,3 +1,4 @@
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -173,9 +174,65 @@ def plot_time_series_with_economics(time_series_by_param, time_axis, param_value
     return fig
 
 
+def _continuation_line_segments(param_values, state_values, stable_flags):
+    """Split a continuation branch into contiguous stable/unstable line segments."""
+    segments = []
+    num_points = len(param_values)
+    segment_start = None
+    segment_stable = None
+
+    def flush(end_exclusive):
+        if segment_start is None or end_exclusive - segment_start < 1:
+            return
+        segments.append({
+            'param_values': param_values[segment_start:end_exclusive],
+            'values': state_values[segment_start:end_exclusive],
+            'stable': segment_stable,
+        })
+
+    for index in range(num_points):
+        if not np.isfinite(state_values[index]) or not np.isfinite(param_values[index]):
+            flush(index)
+            segment_start = None
+            segment_stable = None
+            continue
+        is_stable = bool(stable_flags[index])
+        if segment_start is None:
+            segment_start = index
+            segment_stable = is_stable
+        elif is_stable != segment_stable:
+            flush(index)
+            # Share an endpoint so adjacent segments meet visually at the switch.
+            segment_start = max(index - 1, 0)
+            segment_stable = is_stable
+    flush(num_points)
+    return segments
+
+
 def plot_bifurcation(sweep_values, seafood_values, effort_values, fraudster_values,
                      perception_values, xlabel, title, vline_x=None, vline_label=None,
-                     colors=VAR_COLORS):
+                     colors=VAR_COLORS, continuation_branch=None):
+    """
+    Plot a 2×2 attractor scatter, optionally overlaid with a fixed-point branch.
+
+    Args:
+        sweep_values: X-axis values for attractor samples.
+        seafood_values: Attractor S samples.
+        effort_values: Attractor E samples.
+        fraudster_values: Attractor F samples.
+        perception_values: Attractor FP samples.
+        xlabel: X-axis label.
+        title: Figure title.
+        vline_x: Optional vertical reference line.
+        vline_label: Label for that reference line.
+        colors: Color map for attractor markers.
+        continuation_branch: Optional dict from ``continue_fixed_point`` with
+            ``param_values``, ``S``, ``E``, ``F``, ``FP``, ``stable``. Solid black
+            = locally stable; dotted black = unstable.
+
+    Returns:
+        A Plotly figure.
+    """
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=['Seafood S*', 'Effort E*', 'Fraudsters F*', 'Perception FP*'],
@@ -197,6 +254,50 @@ def plot_bifurcation(sweep_values, seafood_values, effort_values, fraudster_valu
         x=sweep_values, y=perception_values, mode='markers',
         marker=dict(color=colors['FP'], size=2, opacity=0.4), showlegend=False,
     ), row=2, col=2)
+
+    if continuation_branch is not None and len(continuation_branch.get('param_values', [])):
+        param_values = np.asarray(continuation_branch['param_values'], dtype=np.float64)
+        stable_flags = np.asarray(continuation_branch['stable'], dtype=bool)
+        state_panels = [
+            (continuation_branch['S'], 1, 1),
+            (continuation_branch['E'], 1, 2),
+            (continuation_branch['F'], 2, 1),
+            (continuation_branch['FP'], 2, 2),
+        ]
+        shown_stable_legend = False
+        shown_unstable_legend = False
+        for panel_index, (state_values, row, col) in enumerate(state_panels):
+            state_values = np.asarray(state_values, dtype=np.float64)
+            for segment in _continuation_line_segments(
+                param_values, state_values, stable_flags,
+            ):
+                is_stable = segment['stable']
+                show_legend = panel_index == 0 and (
+                    (is_stable and not shown_stable_legend)
+                    or ((not is_stable) and not shown_unstable_legend)
+                )
+                if is_stable:
+                    shown_stable_legend = True
+                else:
+                    shown_unstable_legend = True
+                fig.add_trace(go.Scatter(
+                    x=segment['param_values'], y=segment['values'], mode='lines',
+                    line=dict(
+                        color='black', width=2.0,
+                        dash='solid' if is_stable else 'dot',
+                    ),
+                    name=(
+                        'Fixed point (stable)' if is_stable
+                        else 'Fixed point (unstable)'
+                    ),
+                    legendgroup='fp_stable' if is_stable else 'fp_unstable',
+                    showlegend=show_legend,
+                    hovertemplate=(
+                        'μ=%{x:.4f}<br>x*=%{y:.4f}'
+                        f'<br>({"stable" if is_stable else "unstable"})<extra></extra>'
+                    ),
+                ), row=row, col=col)
+
     if vline_x is not None:
         fig.add_vline(
             x=vline_x, line_dash='dash', line_color='gray',
@@ -209,7 +310,13 @@ def plot_bifurcation(sweep_values, seafood_values, effort_values, fraudster_valu
     fig.update_xaxes(title_text=xlabel, title_font=_LABEL_FONT, row=2)
     fig.update_yaxes(range=[0, 1], row=2)
     fig.update_annotations(font=_LABEL_FONT)
-    fig.update_layout(height=750, title_text=title, margin=dict(t=60, b=40))
+    fig.update_layout(
+        height=750, title_text=title, margin=dict(t=60, b=40),
+        legend=dict(
+            orientation='h', yanchor='bottom', y=1.02,
+            font=dict(color='#2c2c2c', size=13),
+        ),
+    )
     return fig
 
 

@@ -7,6 +7,13 @@ from core.plots import plot_bifurcation, plot_poincare_maps, plot_time_series_wi
 from core.metrics import build_heatmap_display_rows, market_price_params_from_overrides
 from ._status import scenario_header, status_indicator
 from ._sys_params import initial_state_from_overrides, system_parameters_ui
+from ._continuation_ui import (
+    bifurcation_parameter_ui,
+    param_axis_label,
+    run_attractor_bifurcation,
+    run_continuation_branch,
+    show_continuation_diagnostics,
+)
 
 
 F_THRESHOLD_OPTIONS = [0.05, 0.25, 0.5, 0.75, 0.95]
@@ -37,40 +44,6 @@ def blast_time_series(alpha: float, f_threshold: float, simulation_timesteps: in
 
 
 @st.cache_data(show_spinner=False)
-def blast_bifurcation(alpha_min: float, alpha_max: float, resolution: int,
-                      bifurcation_timesteps: int, burn_in_fraction: float,
-                      f_threshold: float,
-                      system_param_overrides: tuple = ()) -> tuple:
-    alpha_values = np.linspace(alpha_min, alpha_max, resolution)
-    burn_in_steps = int(bifurcation_timesteps * burn_in_fraction)
-    bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception = [], [], [], [], []
-    for alpha in alpha_values:
-        params = DEFAULT_PARAMS.copy()
-        if system_param_overrides:
-            params.update(dict(system_param_overrides))
-        params.update(_blast_params(float(alpha)))
-        params['F_threshold'] = f_threshold
-        initial_state = initial_state_from_overrides(system_param_overrides)
-        state = {k: np.float128(v) for k, v in initial_state.items()}
-        system = DynamicalSystem(params, state, "dimensionalized")
-        time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
-        seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
-        effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
-        fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
-        perception_attractor = time_series['Perception of Fraud'][burn_in_steps:].astype(np.float64)
-        attractor_length = len(seafood_attractor)
-        bif_alpha.extend([float(alpha)] * attractor_length)
-        bif_seafood.extend(seafood_attractor.tolist())
-        bif_effort.extend(effort_attractor.tolist())
-        bif_fraudsters.extend(fraudsters_attractor.tolist())
-        bif_perception.extend(perception_attractor.tolist())
-    return (
-        np.array(bif_alpha), np.array(bif_seafood), np.array(bif_effort),
-        np.array(bif_fraudsters), np.array(bif_perception),
-    )
-
-
-@st.cache_data(show_spinner=False)
 def blast_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
                                      simulation_timesteps: int,
                                      system_param_overrides: tuple = ()) -> dict:
@@ -87,36 +60,28 @@ def blast_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
 
 
 @st.cache_data(show_spinner=False)
-def blast_bifurcation_vs_f_threshold(alpha_held: float, f_threshold_min: float,
-                                     f_threshold_max: float, resolution: int,
-                                     bifurcation_timesteps: int, burn_in_fraction: float,
-                                     system_param_overrides: tuple = ()) -> tuple:
-    f_threshold_values = np.linspace(f_threshold_min, f_threshold_max, resolution)
-    burn_in_steps = int(bifurcation_timesteps * burn_in_fraction)
-    bif_f_threshold, bif_seafood, bif_effort, bif_fraudsters, bif_perception = [], [], [], [], []
-    for f_threshold in f_threshold_values:
-        params = DEFAULT_PARAMS.copy()
-        if system_param_overrides:
-            params.update(dict(system_param_overrides))
-        params.update(_blast_params(alpha_held))
-        params['F_threshold'] = float(f_threshold)
-        initial_state = initial_state_from_overrides(system_param_overrides)
-        state = {k: np.float128(v) for k, v in initial_state.items()}
-        system = DynamicalSystem(params, state, "dimensionalized")
-        time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
-        seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)
-        effort_attractor = time_series['Effort'][burn_in_steps:].astype(np.float64)
-        fraudsters_attractor = time_series['Fraudsters'][burn_in_steps:].astype(np.float64)
-        perception_attractor = time_series['Perception of Fraud'][burn_in_steps:].astype(np.float64)
-        attractor_length = len(seafood_attractor)
-        bif_f_threshold.extend([float(f_threshold)] * attractor_length)
-        bif_seafood.extend(seafood_attractor.tolist())
-        bif_effort.extend(effort_attractor.tolist())
-        bif_fraudsters.extend(fraudsters_attractor.tolist())
-        bif_perception.extend(perception_attractor.tolist())
-    return (
-        np.array(bif_f_threshold), np.array(bif_seafood), np.array(bif_effort),
-        np.array(bif_fraudsters), np.array(bif_perception),
+def blast_bifurcation(param_key: str, range_min: float, range_max: float,
+                      resolution: int, bifurcation_timesteps: int,
+                      burn_in_fraction: float, held_alpha: float,
+                      held_f_threshold: float,
+                      system_param_overrides: tuple = ()) -> tuple:
+    """Attractor bifurcation sweep along an arbitrary parameter."""
+    return run_attractor_bifurcation(
+        param_key, (range_min, range_max), resolution, bifurcation_timesteps,
+        burn_in_fraction, _blast_params, held_alpha, held_f_threshold,
+        system_param_overrides,
+    )
+
+
+@st.cache_data(show_spinner=False)
+def blast_continuation(param_key: str, range_min: float, range_max: float,
+                       resolution: int, held_alpha: float,
+                       held_f_threshold: float,
+                       system_param_overrides: tuple = ()) -> dict:
+    """Pseudo-arclength fixed-point continuation along an arbitrary parameter."""
+    return run_continuation_branch(
+        param_key, (range_min, range_max), resolution, _blast_params,
+        held_alpha, held_f_threshold, system_param_overrides,
     )
 
 
@@ -184,15 +149,18 @@ def scenario_bf():
                 "F_threshold", F_THRESHOLD_OPTIONS,
                 index=F_THRESHOLD_OPTIONS.index(0.5), key="bf_ftA",
             )
-            st.markdown("**Bifurcation**")
+            st.markdown("**Bifurcation & Continuation**")
             bifurcation_timesteps_alpha = st.slider(
                 "Iteration length", 100, 1000, 300, 50, key="bf_bifA_iter",
             )
             bifurcation_resolution_alpha = st.slider(
-                "Resolution", 50, 500, 200, 50, key="bf_resA",
+                "Attractor resolution", 50, 500, 200, 50, key="bf_resA",
             )
-            alpha_range = st.slider(
-                "α range", 0.0, 1.0, (0.0, 1.0), 0.05, key="bf_rng",
+            continuation_resolution_alpha = st.slider(
+                "Continuation resolution", 40, 300, 100, 20, key="bf_contA",
+            )
+            bif_param_alpha, bif_range_alpha = bifurcation_parameter_ui(
+                "bfA", default_key="alpha",
             )
 
         with col_vs_f_threshold:
@@ -209,15 +177,18 @@ def scenario_bf():
                 "α (held)", ALPHA_OPTIONS,
                 index=ALPHA_OPTIONS.index(0.55), key="bf_ahold",
             )
-            st.markdown("**Bifurcation**")
+            st.markdown("**Bifurcation & Continuation**")
             bifurcation_timesteps_ft = st.slider(
                 "Iteration length", 100, 1000, 300, 50, key="bf_bifB_iter",
             )
             bifurcation_resolution_ft = st.slider(
-                "Resolution", 50, 500, 200, 50, key="bf_resB",
+                "Attractor resolution", 50, 500, 200, 50, key="bf_resB",
             )
-            f_threshold_range = st.slider(
-                "F_threshold range", 0.0, 1.0, (0.1, 1.0), 0.05, key="bf_ftrng",
+            continuation_resolution_ft = st.slider(
+                "Continuation resolution", 40, 300, 100, 20, key="bf_contB",
+            )
+            bif_param_ft, bif_range_ft = bifurcation_parameter_ui(
+                "bfB", default_key="F_threshold",
             )
 
     system_param_overrides = system_parameters_ui("bf", exclude={'q1', 'pw1', 'c1'})
@@ -352,39 +323,61 @@ def scenario_bf():
 
     with tab_bifurcation:
         with status_indicator(status_slot, [
-            "Computing bifurcation diagram (α sweep)",
-            "Computing bifurcation diagram (F_threshold sweep)",
+            "Computing bifurcation diagram (panel A)",
+            "Computing bifurcation diagram (panel B)",
+            "Continuing fixed points (panel A)",
+            "Continuing fixed points (panel B)",
         ]):
-            bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception = blast_bifurcation(
-                float(alpha_range[0]), float(alpha_range[1]),
+            bif_mu_a, bif_seafood, bif_effort, bif_fraudsters, bif_perception = blast_bifurcation(
+                bif_param_alpha, float(bif_range_alpha[0]), float(bif_range_alpha[1]),
                 bifurcation_resolution_alpha, bifurcation_timesteps_alpha, 0.6,
+                float(alpha_held), float(f_threshold_for_alpha_sweep),
+                system_param_overrides,
+            )
+            bif_mu_b, bif_seafood_ft, bif_effort_ft, bif_fraudsters_ft, bif_perception_ft = (
+                blast_bifurcation(
+                    bif_param_ft, float(bif_range_ft[0]), float(bif_range_ft[1]),
+                    bifurcation_resolution_ft, bifurcation_timesteps_ft, 0.6,
+                    float(alpha_held), float(f_threshold_for_alpha_sweep),
+                    system_param_overrides,
+                )
+            )
+            branch_a = blast_continuation(
+                bif_param_alpha, float(bif_range_alpha[0]), float(bif_range_alpha[1]),
+                continuation_resolution_alpha, float(alpha_held),
                 float(f_threshold_for_alpha_sweep), system_param_overrides,
             )
-            (
-                bif_f_threshold, bif_seafood_ft, bif_effort_ft,
-                bif_fraudsters_ft, bif_perception_ft,
-            ) = blast_bifurcation_vs_f_threshold(
-                float(alpha_held), float(f_threshold_range[0]), float(f_threshold_range[1]),
-                bifurcation_resolution_ft, bifurcation_timesteps_ft, 0.6, system_param_overrides,
+            branch_b = blast_continuation(
+                bif_param_ft, float(bif_range_ft[0]), float(bif_range_ft[1]),
+                continuation_resolution_ft, float(alpha_held),
+                float(f_threshold_for_alpha_sweep), system_param_overrides,
             )
 
+        axis_label_a = param_axis_label(bif_param_alpha)
+        axis_label_b = param_axis_label(bif_param_ft)
         bif_subtab_alpha, bif_subtab_ft = st.tabs(["vs α", "vs F_threshold"])
         with bif_subtab_alpha:
             fig = plot_bifurcation(
-                bif_alpha, bif_seafood, bif_effort, bif_fraudsters, bif_perception,
-                xlabel='Destruction Intensity (α)',
-                title='Bifurcation over α   '
-                      f'(F_threshold={f_threshold_for_alpha_sweep}  |  α=0 → honest  |  α=1 → q₁=0.40, pw₁=0.60, c₁=0.10)',
+                bif_mu_a, bif_seafood, bif_effort, bif_fraudsters, bif_perception,
+                xlabel=axis_label_a,
+                title=(
+                    f'Bifurcation over {axis_label_a}   '
+                    f'(held F_threshold={f_threshold_for_alpha_sweep}, α={alpha_held} when not sweeping α)'
+                ),
+                continuation_branch=branch_a,
             )
             st.plotly_chart(fig, width='stretch')
+            show_continuation_diagnostics(branch_a, axis_label_a)
         with bif_subtab_ft:
             fig = plot_bifurcation(
-                bif_f_threshold, bif_seafood_ft, bif_effort_ft,
+                bif_mu_b, bif_seafood_ft, bif_effort_ft,
                 bif_fraudsters_ft, bif_perception_ft,
-                xlabel='F_threshold',
-                title=f'Bifurcation over F_threshold   (held {held_alpha_label})',
+                xlabel=axis_label_b,
+                title=f'Bifurcation over {axis_label_b}   (held {held_alpha_label})',
+                continuation_branch=branch_b,
             )
             st.plotly_chart(fig, width='stretch')
+            show_continuation_diagnostics(branch_b, axis_label_b)
 
     with tab_poincare:
         with status_indicator(status_slot, [

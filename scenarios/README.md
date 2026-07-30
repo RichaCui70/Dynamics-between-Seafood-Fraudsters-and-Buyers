@@ -10,6 +10,7 @@ Each scenario module is a Streamlit page section: analysis controls, cached simu
 | [`scenario_eez.py`](scenario_eez.py) | EEZ non-enforcement; violation intensity `α` |
 | [`_sys_params.py`](_sys_params.py) | Shared “System Parameters” slider UI |
 | [`_status.py`](_status.py) | Header + compute-status indicator |
+| [`_continuation_ui.py`](_continuation_ui.py) | Bifurcation-parameter picker + shared attractor / continuation runners |
 | [`__init__.py`](__init__.py) | Re-exports the four `scenario_*` entry points |
 
 Plot builders live in [`core/plots.py`](../core/plots.py) (not under `scenarios/`).
@@ -58,14 +59,16 @@ Not a 2D α×F̂ grid — separate heatmaps under the **vs α** and **vs F_thres
 
 ### Bifurcation diagrams
 
-Post-burn attractor points plotted against the sweep axis:
+Post-burn attractor points plotted against the sweep axis, with an optional **fixed-point continuation overlay** (pseudo-arclength):
 
-| Scenario | Sweep A | Sweep B |
-|----------|---------|---------|
+| Scenario | Sweep A (default) | Sweep B (default) |
+|----------|-------------------|-------------------|
 | Baseline | `r` → S*, E* only | — |
-| BF / PS / EEZ | `α` → S*, E*, F*, FP* (held `F_threshold`) | `F_threshold` → same (held `α`) |
+| BF / PS / EEZ | user-chosen parameter (default `α`) | user-chosen parameter (default `F_threshold`) |
 
-**Scientific role:** locate fixed points vs oscillations/chaos; mark where fraud or detection threshold opens new attractors. Baseline marks default `r`; PS marks `α = 0`.
+For BF / PS / EEZ each panel has a bifurcation-parameter dropdown + range slider (any dynamical parameter from System Parameters, plus synthetic `α`). The attractor scatter and the continuation curve share that axis. Overlay style: **solid black** = locally stable (`ρ < 1`), **dotted black** = unstable. No bifurcation-point labels (NS/LP/PD) yet.
+
+**Scientific role:** locate fixed points vs oscillations/chaos; show where equilibria live and lose stability as the chosen parameter varies. Baseline marks default `r`; PS marks `α = 0` when sweeping α.
 
 ### Poincaré / return maps
 
@@ -105,21 +108,21 @@ Together they answer: *how bad does fraud get as intensity rises?* and *does rai
   - `q1 = q0 + α·0.33` ↑
   - `pw1 = pw0 − α·0.40` ↓
   - `c1 = c0 − α·0.80` ↓↓ (cost falls faster than wholesale price)
-- Cached: `blast_time_series` / `blast_bifurcation` (and `*_vs_f_threshold` variants); `blast_baseline` / `blast_baseline_time_series` for heatmap & column baselines.
-- **Tabs:** Time Series (with economics + heatmaps) · Bifurcation · Poincare — each with **vs α** / **vs F_threshold** subtabs.
+- Cached: `blast_time_series` / `blast_bifurcation` / `blast_continuation` (param-key aware); `blast_baseline` / `blast_baseline_time_series` for heatmap & column baselines.
+- **Tabs:** Time Series (with economics + heatmaps) · Bifurcation (attractor + continuation overlay) · Poincare — each with **vs α** / **vs F_threshold** subtabs.
 
 ### `scenario_ps.py` — Prized / protected seafood
 
 - `α` drives illegal catch premium: `pw1 = pw0 + α·4`; gear unchanged (`c1 = c0`, `q1 = q0`).
 - Same dual-sweep tabs as blast, plus **Stability** (`prized_spectral_sweep`).
 - Time series use `plot_time_series_with_economics` (prices matter when premium rises).
-- Cached helpers: `prized_time_series`, `prized_bifurcation`, `prized_baseline_time_series`, etc.
+- Cached helpers: `prized_time_series`, `prized_bifurcation`, `prized_continuation`, `prized_baseline_time_series`, etc.
 
 ### `scenario_eez.py` — Non-enforcement of EEZ
 
 - Outside-EEZ access: `q1 = q0 + α·0.23` ↑, `c1 = c0 + α·1.10` ↑; `pw1` stays at default.
 - Same dual-sweep tabs as blast; time series use `plot_four_variable_time_series` (no extra price rows).
-- Cached helpers: `eez_time_series`, `eez_bifurcation`, `eez_baseline_time_series`, etc.
+- Cached helpers: `eez_time_series`, `eez_bifurcation`, `eez_continuation`, `eez_baseline_time_series`, etc.
 
 ---
 
@@ -128,6 +131,6 @@ Together they answer: *how bad does fraud get as intensity rises?* and *does rai
 | Tab | Baseline | Blast (BF) | Prized (PS) | EEZ |
 |-----|----------|------------|-------------|-----|
 | Time Series | S/H & E vs `r` | Economics TS + heatmap; vs α & vs F̂ | Economics TS + heatmap; vs α & vs F̂ | 4-var TS + heatmap; vs α & vs F̂ |
-| Bifurcation | S*, E* vs `r` | 4-var vs α & vs F̂ | 4-var vs α & vs F̂ | 4-var vs α & vs F̂ |
+| Bifurcation | S*, E* vs `r` | Attractor + FP continuation (param picker; defaults α / F̂) | same | same |
 | Poincare | S, E return maps vs `r` | vs α & vs F̂ (+ baseline col) | vs α & vs F̂ (+ baseline col) | vs α & vs F̂ (+ baseline col) |
 | Stability | — | — | `ρ(α)` | — |

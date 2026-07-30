@@ -130,6 +130,7 @@ The `DynamicalSystem` class has three key methods:
 - **`find_fixed_point()`** — Uses `scipy.optimize.least_squares` with Trust Region Reflective (TRF) to find `x*` satisfying `G(x*) = x*`, with box constraints to keep variables in physical bounds. Uses orbit-mean + last-iterate two-candidate strategy to handle limit cycles and chaos.
 - **`jacobian(state, h)`** — 4×4 Jacobian via central finite differences with optimal step size `h = ε^(1/3) * max(1, |x_i|)`.
 - **`stability_analysis()`** — Finds fixed point, computes Jacobian, extracts eigenvalues via `numpy.linalg.eig`. Spectral radius `ρ < 1` → stable; `ρ > 1` → unstable. Transition at `ρ = 1` through complex conjugate pair = Neimark-Sacker bifurcation.
+- **`continue_fixed_point()`** (in `core/continuation.py`) — Pseudo-arclength branch tracing of `G(x;μ)=x`; sibling of `stability_analysis()` for plotting equilibrium curves vs a free parameter.
 
 ---
 
