@@ -1,6 +1,6 @@
 INTRO = r'''
     # Seafood Fraud Modelling App
-    *Modeling the Time Dynamics of Seafood Harvesting: Interactions between Buyers, Fraudsters, and Resource Sustainability*
+    #### Modeling the Time Dynamics of Seafood Harvesting: Interactions between Buyers, Fraudsters, and Resource Sustainability
 
     ## Introduction
     Seafood is one of the most heavily traded food comodities in the era of globalization (Shehata et al. 2016). Being around a quarter of the global intake of animal protein, seafood has a huge economy, with around one-tenth of the world's population living off revenue generated from fisheries. With such a demand for seafood in the modern era, the pressure to meet the global demand, taken together with unethical fishing tactics and the complexities of global supply chains make it increasingly importantly, yet difficult to ensure the authenticity and traceability of seafood products on the market (Naaum et al. 2016). In other words, it's diffucult to track where seafood fraud can occur in the supply chain. Seafood fraud can be defined as the act of mislabelling, substituting, adulterating, and/or unethically harvesting seafood.
