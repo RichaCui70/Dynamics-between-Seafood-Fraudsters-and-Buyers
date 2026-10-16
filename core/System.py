@@ -3,8 +3,8 @@ import warnings
 from scipy.optimize import least_squares
 from core.constants import DEFAULT_PARAMS
 
-_CLOSE_TO_ZERO = np.finfo(np.float128).eps
-_CLOSE_TO_ONE = 1 - np.finfo(np.float128).epsneg
+_CLOSE_TO_ZERO = np.finfo(np.longdouble).eps
+_CLOSE_TO_ONE = 1 - np.finfo(np.longdouble).epsneg
 _POSITIVE_INF = np.inf
 _STATE_VARS = ('S', 'E', 'F', 'FP')
 
@@ -15,34 +15,34 @@ class DynamicalSystem():
         Args:
             params (dict): A dictionary of system parameters containing:
                 Expected keys:
-                * gamma_m (float128): [Add description for gamma_m].
-                * gamma_p (float128): [Add description for gamma_p].
-                * gamma_f (float128): [Add description for gamma_f].
-                * gamma_s (float128): [Add description for gamma_s].
-                * gamma_e (float128): [Add description for gamma_e].
-                * gamma_fp (float128): [Add description for gamma_fp].
-                * e_d (float128): [Add description for e_d].
-                * e_sw (float128): [Add description for e_sw].
-                * e_sm (float128): [Add description for e_sm].
-                * K (float128): Carrying capacity of the seafood population.
-                * F_threshold (float128): Threshold limit for fraud.
-                * F_min (float128): Minimum fraudster share.
-                * F_max (float128): Maximum fraudster share.
-                * FP_min (float128): Minimum fraud perception.
-                * FP_max (float128): Maximum fraud perception.
-                * q0 (float128): Catchability coefficient when no fraudsters are present.
-                * q1 (float128): Catchability coefficient when fraudsters are present.
-                * r (float128): Intrinsic growth rate.
-                * pw0 (float128): [Add description for pw0].
-                * c0 (float128): [Add description for c0].
-                * pw1 (float128): [Add description for pw1].
-                * c1 (float128): [Add description for c1].
+                * gamma_m (longdouble): [Add description for gamma_m].
+                * gamma_p (longdouble): [Add description for gamma_p].
+                * gamma_f (longdouble): [Add description for gamma_f].
+                * gamma_s (longdouble): [Add description for gamma_s].
+                * gamma_e (longdouble): [Add description for gamma_e].
+                * gamma_fp (longdouble): [Add description for gamma_fp].
+                * e_d (longdouble): [Add description for e_d].
+                * e_sw (longdouble): [Add description for e_sw].
+                * e_sm (longdouble): [Add description for e_sm].
+                * K (longdouble): Carrying capacity of the seafood population.
+                * F_threshold (longdouble): Threshold limit for fraud.
+                * F_min (longdouble): Minimum fraudster share.
+                * F_max (longdouble): Maximum fraudster share.
+                * FP_min (longdouble): Minimum fraud perception.
+                * FP_max (longdouble): Maximum fraud perception.
+                * q0 (longdouble): Catchability coefficient when no fraudsters are present.
+                * q1 (longdouble): Catchability coefficient when fraudsters are present.
+                * r (longdouble): Intrinsic growth rate.
+                * pw0 (longdouble): [Add description for pw0].
+                * c0 (longdouble): [Add description for c0].
+                * pw1 (longdouble): [Add description for pw1].
+                * c1 (longdouble): [Add description for c1].
             state: A dictionary of the initial system state containing:
                 Expected keys:
-                * S (float128): Seafood biomass.
-                * E (float128): Fishing effort.
-                * F (float128): Current level of fraud.
-                * FP (float128): Public perception of fraud.
+                * S (longdouble): Seafood biomass.
+                * E (longdouble): Fishing effort.
+                * F (longdouble): Current level of fraud.
+                * FP (longdouble): Public perception of fraud.
             equation_form: Which equation set to advance.
                 Expected values:
                 * "nondimensionalized": Initializes the system in nondimensionalized form.
@@ -69,7 +69,7 @@ class DynamicalSystem():
         '''
         S_next = np.clip(
             [S * np.exp(gamma_s * (1 - S - E * catchability))],
-            np.finfo(np.float128).eps,
+            np.finfo(np.longdouble).eps,
             _POSITIVE_INF
         )[0]
 
@@ -219,7 +219,7 @@ class DynamicalSystem():
         '''
         S_next = np.clip(
             [S * np.exp(gamma_s * (r * (1 - S / K) - q * E))],
-            np.finfo(np.float128).eps,
+            np.finfo(np.longdouble).eps,
             _POSITIVE_INF
         )[0]
 
@@ -384,15 +384,15 @@ class DynamicalSystem():
         }
     
     def generate_time_series(self, num_timesteps, title="", x_label="", y_label="", ax=None) -> dict:
-        seafood = np.array(self.state['S'], dtype=np.float128)
-        effort = np.array(self.state['E'], dtype=np.float128)
-        fraudsters = np.array(self.state['F'], dtype=np.float128)
-        fraud_perception = np.array(self.state['FP'], dtype=np.float128)
-        harvest_arr = np.array(self.harvest(), dtype=np.float128)
-        market_price_arr = np.array(self.market_price(), dtype=np.float128)
-        wholesale_price_arr = np.array(self.wholesale_price(), dtype=np.float128)
-        revenue_arr = np.array(self.revenue_per_unit_effort(), dtype=np.float128)
-        cost_arr = np.array(self.cost_per_unit_effort(), dtype=np.float128)
+        seafood = np.array(self.state['S'], dtype=np.longdouble)
+        effort = np.array(self.state['E'], dtype=np.longdouble)
+        fraudsters = np.array(self.state['F'], dtype=np.longdouble)
+        fraud_perception = np.array(self.state['FP'], dtype=np.longdouble)
+        harvest_arr = np.array(self.harvest(), dtype=np.longdouble)
+        market_price_arr = np.array(self.market_price(), dtype=np.longdouble)
+        wholesale_price_arr = np.array(self.wholesale_price(), dtype=np.longdouble)
+        revenue_arr = np.array(self.revenue_per_unit_effort(), dtype=np.longdouble)
+        cost_arr = np.array(self.cost_per_unit_effort(), dtype=np.longdouble)
         
         for _ in range(num_timesteps):
             result = self.system_map()
@@ -450,7 +450,7 @@ class DynamicalSystem():
 
         saved_state = self.state.copy()
         self.state = {
-            k: np.float128(v)
+            k: np.longdouble(v)
             for k, v in zip(_STATE_VARS, clamped)
         }
         result = self.system_map()

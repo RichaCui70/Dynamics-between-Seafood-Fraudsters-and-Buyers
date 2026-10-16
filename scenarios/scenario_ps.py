@@ -40,7 +40,7 @@ def prized_time_series(alpha: float, f_threshold: float, simulation_timesteps: i
     params.update(_prized_params(alpha))
     params['F_threshold'] = f_threshold
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -56,7 +56,7 @@ def prized_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
     params.update(_prized_params(alpha_held))
     params['F_threshold'] = f_threshold
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -99,7 +99,7 @@ def prized_spectral_sweep(alpha_min: float, alpha_max: float, resolution: int,
             params.update(dict(system_param_overrides))
         params.update(_prized_params(float(alpha)))
         initial_state = initial_state_from_overrides(system_param_overrides)
-        state = {k: np.float128(v) for k, v in initial_state.items()}
+        state = {k: np.longdouble(v) for k, v in initial_state.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
         result = system.stability_analysis()
         spectral_radii[index] = result['spectral_radius']
@@ -115,9 +115,9 @@ def prized_baseline(simulation_timesteps: int, system_param_overrides: tuple = (
     params.update(_prized_params(0.0))
     params.update({'F_threshold': 0.5})
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
-    state['F'] = np.float128(0.0)
-    state['FP'] = np.float128(0.0)
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
+    state['F'] = np.longdouble(0.0)
+    state['FP'] = np.longdouble(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     burn_in_steps = int(simulation_timesteps * 0.6)
@@ -138,9 +138,9 @@ def prized_baseline_time_series(simulation_timesteps: int,
     params.update(_prized_params(0.0))
     params.update({'F_threshold': 0.5})
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
-    state['F'] = np.float128(0.0)
-    state['FP'] = np.float128(0.0)
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
+    state['F'] = np.longdouble(0.0)
+    state['FP'] = np.longdouble(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}

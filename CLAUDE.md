@@ -147,7 +147,7 @@ The `DynamicalSystem` class has three key methods:
 
 - State variables use a dict with keys `'S'`, `'E'`, `'F'`, `'FP'`
 - The system can run in `"dimensionalized"` or `"nondimensionalized"` mode
-- All state variables use `np.float128` for numerical precision
+- All state variables use `np.longdouble` for numerical precision
 - Plots use matplotlib; the Streamlit app uses the same `DynamicalSystem` class
 - Equations in `text.py` are raw LaTeX strings rendered by Streamlit
 - All variables and functions should use snake_case

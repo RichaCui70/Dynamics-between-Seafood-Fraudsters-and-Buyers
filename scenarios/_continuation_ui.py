@@ -214,7 +214,7 @@ def run_attractor_bifurcation(
     bif_mu, bif_seafood, bif_effort, bif_fraudsters, bif_perception = [], [], [], [], []
     for mu in mu_values:
         params = params_at(float(mu))
-        state = {key: np.float128(value) for key, value in initial_state.items()}
+        state = {key: np.longdouble(value) for key, value in initial_state.items()}
         system = DynamicalSystem(params, state, "dimensionalized")
         time_series = system.generate_time_series(num_timesteps=bifurcation_timesteps)
         seafood_attractor = time_series['Seafood'][burn_in_steps:].astype(np.float64)

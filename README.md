@@ -138,8 +138,8 @@ import numpy as np
 
 params = DEFAULT_PARAMS.copy()
 params.update({'pw1': 1.5, 'c1': 0.9, 'q1': 0.07})
-state = {'S': np.float128(0.6), 'E': np.float128(0.3),
-         'F': np.float128(0.1), 'FP': np.float128(0.1)}
+state = {'S': np.longdouble(0.6), 'E': np.longdouble(0.3),
+         'F': np.longdouble(0.1), 'FP': np.longdouble(0.1)}
 sys = DynamicalSystem(params, state, "dimensionalized")
 
 result = sys.stability_analysis()

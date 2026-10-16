@@ -423,3 +423,235 @@ def plot_time_series_heatmap(percent_by_metric, param_values, param_label,
         figures.append(fig)
 
     return figures if figures else None
+
+
+STORY_OUTCOME_METRICS = [
+    ('Seafood', 'Seafood stock  S̄'),
+    ('Harvest', 'Harvest  H̄'),
+    ('Market Price', 'Market price  P̄ᵐ'),
+]
+STORY_FRAUD_METRICS = [
+    ('Fraudsters', 'Fraudster share  F̄'),
+    ('Perception of Fraud', 'Fraud perception  F̄P̄'),
+]
+_STORY_PERCENT_TICKS = [-98, -90, -75, -50, 0, 100, 300, 900]
+_STORY_FRAUD_PERCENT_TICKS = [-99.9, -99, -90, -50, 0, 100, 300, 900, 1900]
+_WORSE_BAND_COLOR = 'rgba(214, 52, 46, 0.06)'
+
+
+def _story_fraud_summary_html(fraud_means_by_story, story_labels, story_colors):
+    """One coloured 'Story: F̄ x · F̄P̄ y' line per story, for a plotly annotation."""
+    return '<br>'.join(
+        f"<span style='color:{color}'>{label.split('  ')[0]}</span>: "
+        f"F̄ {fraud_means_by_story[label][0]:.2f} · F̄P̄ {fraud_means_by_story[label][1]:.2f}"
+        for label, color in zip(story_labels, story_colors)
+    )
+
+
+def plot_story_outcome_curves(alpha_values, outcomes_by_story, story_labels, story_colors):
+    """Post-transient outcomes vs α, one line per parameter story.
+
+    Row 1: S̄, H̄, P̄ᵐ as ratios to each story's own no-fraud baseline, on a log
+    axis whose ticks read as % change (shaded band = worse than baseline).
+    Row 2: F̄ and F̄P̄ as ratios to each story's own α = 0 run (fraud without
+    blasting), on the same kind of log % axis — the no-fraud baseline has
+    F = FP = 0, so a % change against it is undefined.
+    """
+    fig = make_subplots(
+        rows=2, cols=3,
+        specs=[[{}, {}, {}], [{}, {}, None]],
+        subplot_titles=[title for _, title in STORY_OUTCOME_METRICS + STORY_FRAUD_METRICS],
+        horizontal_spacing=0.06, vertical_spacing=0.16,
+    )
+    tick_ratios = [1 + percent / 100 for percent in _STORY_PERCENT_TICKS]
+    tick_labels = [f'{percent:+d}%' if percent else '0' for percent in _STORY_PERCENT_TICKS]
+    ratio_floor, ratio_ceiling = 0.015, 12.0
+    for column, (metric, _) in enumerate(STORY_OUTCOME_METRICS, 1):
+        worse_low, worse_high = (1, ratio_ceiling) if metric == 'Market Price' else (ratio_floor, 1)
+        fig.add_hrect(y0=worse_low, y1=worse_high, fillcolor=_WORSE_BAND_COLOR,
+                      line_width=0, layer='below', row=1, col=column)
+        fig.add_hline(y=1, line=dict(color='#888888', width=1), row=1, col=column)
+        for label, color in zip(story_labels, story_colors):
+            ratios = np.clip(np.asarray(outcomes_by_story[label][metric], dtype=float), 1e-3, None)
+            fig.add_trace(go.Scatter(
+                x=alpha_values, y=ratios, mode='lines',
+                line=dict(color=color, width=2.5),
+                name=label, legendgroup=label, showlegend=column == 1,
+                customdata=(ratios - 1) * 100,
+                hovertemplate='α = %{x:.2f}<br>%{customdata:+.1f}%<extra>' + label + '</extra>',
+            ), row=1, col=column)
+    fraud_ratio_floor = 8e-4
+    fraud_ratio_ceiling = 2.0
+    for column, (metric, _) in enumerate(STORY_FRAUD_METRICS, 1):
+        fig.add_hline(y=1, line=dict(color='#888888', width=1), row=2, col=column)
+        for label, color in zip(story_labels, story_colors):
+            ratios = np.clip(np.asarray(outcomes_by_story[label][metric], dtype=float),
+                             fraud_ratio_floor * 1.25, None)
+            fraud_ratio_ceiling = max(fraud_ratio_ceiling, float(np.nanmax(ratios, initial=0)) * 1.2)
+            fig.add_trace(go.Scatter(
+                x=alpha_values, y=ratios, mode='lines',
+                line=dict(color=color, width=2.5),
+                name=label, legendgroup=label, showlegend=False,
+                customdata=(ratios - 1) * 100,
+                hovertemplate='α = %{x:.2f}<br>%{customdata:+.1f}%<extra>' + label + '</extra>',
+            ), row=2, col=column)
+    fig.update_yaxes(
+        type='log', tickvals=tick_ratios, ticktext=tick_labels,
+        range=[np.log10(ratio_floor), np.log10(ratio_ceiling)], gridcolor='#e5e5e5', row=1,
+    )
+    fig.update_yaxes(
+        type='log',
+        tickvals=[1 + percent / 100 for percent in _STORY_FRAUD_PERCENT_TICKS],
+        ticktext=[f'{percent:+g}%' if percent else '0' for percent in _STORY_FRAUD_PERCENT_TICKS],
+        range=[np.log10(fraud_ratio_floor), np.log10(fraud_ratio_ceiling)],
+        gridcolor='#e5e5e5', row=2,
+    )
+    fig.update_yaxes(title_text='% change vs. own no-fraud baseline', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='% change vs. own α = 0 run', title_font=_LABEL_FONT, row=2, col=1)
+    fig.update_xaxes(title_text='Blast intensity  α', title_font=_LABEL_FONT, range=[0, 1])
+    fig.update_annotations(font=_LABEL_FONT)
+    fig.update_layout(
+        height=950,
+        title_text='Outcomes vs blast intensity — one line per story (shaded = worse than baseline)',
+        title_y=1.0,
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.04, font=dict(color='#2c2c2c', size=14)),
+        margin=dict(t=110, b=40),
+        hovermode='x unified',
+    )
+    return fig
+
+
+def plot_story_time_series_strip(time_series_by_story, story_labels, story_colors,
+                                 time_axis, burn_in_steps, outcome_badges, title,
+                                 colors=VAR_COLORS):
+    """One column per story at a shared α: S/E/H, F/FP and Pᵐ (log) over time.
+
+    The transient window is shaded grey, dashed lines in the F / FP row mark the
+    post-transient means F̄ and F̄P̄, and each column's x-axis title carries its
+    outcome badge.
+    """
+    num_columns = len(story_labels)
+    fig = make_subplots(
+        rows=3, cols=num_columns,
+        subplot_titles=list(story_labels) + [''] * 2 * num_columns,
+        shared_xaxes=True, vertical_spacing=0.07, horizontal_spacing=0.04,
+    )
+    row1_y_max = max(
+        max(float(time_series_by_story[label][variable].max())
+            for variable in ('Seafood', 'Effort', 'Harvest'))
+        for label in story_labels
+    )
+    traces_by_row = [
+        (1, 'Seafood', 'S', 'Seafood (S)'),
+        (1, 'Effort', 'E', 'Effort (E)'),
+        (1, 'Harvest', 'Harvest', 'Harvest (H)'),
+        (2, 'Fraudsters', 'F', 'Fraudsters (F)'),
+        (2, 'Perception of Fraud', 'FP', 'Perception (FP)'),
+        (3, 'Market Price', 'Pm', 'Market Price (Pₘ)'),
+    ]
+    for column, label in enumerate(story_labels, 1):
+        series = time_series_by_story[label]
+        for row, series_key, color_key, trace_name in traces_by_row:
+            fig.add_trace(go.Scatter(
+                x=time_axis, y=series[series_key], mode='lines',
+                line=dict(color=colors[color_key], width=1.5),
+                name=trace_name, legendgroup=color_key, showlegend=column == 1,
+            ), row=row, col=column)
+        for series_key, color_key, mean_name in [
+            ('Fraudsters', 'F', 'Mean F̄ (post-transient)'),
+            ('Perception of Fraud', 'FP', 'Mean F̄P̄ (post-transient)'),
+        ]:
+            post_transient_mean = float(np.mean(series[series_key][burn_in_steps:]))
+            fig.add_trace(go.Scatter(
+                x=[time_axis[burn_in_steps], time_axis[-1]],
+                y=[post_transient_mean, post_transient_mean], mode='lines',
+                line=dict(color=colors[color_key], width=2.5, dash='dash'),
+                name=mean_name, legendgroup=f'{color_key}_mean', showlegend=column == 1,
+                hovertemplate=f'{mean_name}: {post_transient_mean:.2f}<extra></extra>',
+            ), row=2, col=column)
+        fig.update_xaxes(title_text=f'Time<br>{outcome_badges[label]}',
+                         title_font=dict(color='#2c2c2c', size=14), row=3, col=column)
+    fig.add_vrect(x0=0, x1=burn_in_steps, fillcolor='#f2f2f2', line_width=0,
+                  layer='below', row='all', col='all')
+    fig.update_yaxes(title_text='S / E / H', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_yaxes(title_text='F / FP', title_font=_LABEL_FONT, row=2, col=1)
+    fig.update_yaxes(title_text='Pᵐ (log)', title_font=_LABEL_FONT, row=3, col=1)
+    fig.update_yaxes(range=[0, row1_y_max * 1.05], row=1)
+    fig.update_yaxes(range=[-0.05, 1.05], row=2)
+    market_prices = np.concatenate([
+        np.asarray(time_series_by_story[label]['Market Price'], dtype=float)
+        for label in story_labels
+    ])
+    positive_prices = market_prices[np.isfinite(market_prices) & (market_prices > 0)]
+    if positive_prices.size:
+        fig.update_yaxes(type='log', range=[np.log10(positive_prices.min()) - 0.1,
+                                            np.log10(positive_prices.max()) + 0.1], row=3)
+    else:
+        fig.update_yaxes(type='log', row=3)
+    fig.update_annotations(font=_LABEL_FONT)
+    for annotation, color in zip(fig.layout.annotations, story_colors):
+        annotation.font.color = color
+    fig.update_layout(
+        height=850,
+        title_text=title,
+        title_y=1.0,
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.04, font=dict(color='#2c2c2c', size=14)),
+        margin=dict(t=100, b=110),
+    )
+    return fig
+
+
+def plot_story_phase_portraits(trajectories_by_alpha, fraud_means_by_alpha, story_labels,
+                               story_colors, equilibrium_point):
+    """Post-transient S–E attractors of every story, one panel per α.
+
+    ``trajectories_by_alpha`` maps α → {story label: (seafood, effort)} and
+    ``fraud_means_by_alpha`` maps α → {story label: (F̄, F̄P̄)}, listed in each
+    panel's corner. The no-fraud equilibrium is drawn as a star in every panel.
+    """
+    alpha_values = list(trajectories_by_alpha)
+    fig = make_subplots(
+        rows=1, cols=len(alpha_values),
+        subplot_titles=[f'α = {alpha}' for alpha in alpha_values],
+        horizontal_spacing=0.07,
+    )
+    for column, alpha in enumerate(alpha_values, 1):
+        for label, color in zip(story_labels, story_colors):
+            seafood, effort = trajectories_by_alpha[alpha][label]
+            fig.add_trace(go.Scatter(
+                x=seafood, y=effort, mode='lines', line=dict(color=color, width=2),
+                name=label, legendgroup=label, showlegend=column == 1,
+            ), row=1, col=column)
+            fig.add_trace(go.Scatter(
+                x=[seafood[-1]], y=[effort[-1]], mode='markers',
+                marker=dict(color=color, size=9, line=dict(color='white', width=1.5)),
+                legendgroup=label, showlegend=False, hoverinfo='skip',
+            ), row=1, col=column)
+        fig.add_trace(go.Scatter(
+            x=[equilibrium_point[0]], y=[equilibrium_point[1]], mode='markers',
+            marker=dict(color='#333333', size=16, symbol='star'),
+            name='No-fraud equilibrium', legendgroup='equilibrium', showlegend=column == 1,
+        ), row=1, col=column)
+        fig.add_annotation(
+            text=_story_fraud_summary_html(fraud_means_by_alpha[alpha], story_labels, story_colors),
+            xref='x domain', yref='y domain', x=0.99, y=0.01,
+            xanchor='right', yanchor='bottom', align='left', showarrow=False,
+            font=dict(color='#2c2c2c', size=13),
+            bgcolor='rgba(255, 255, 255, 0.85)', bordercolor='#d0d0d0', borderwidth=1,
+            row=1, col=column,
+        )
+    fig.update_xaxes(title_text='Seafood stock  S', title_font=_LABEL_FONT, range=[0, 1.05])
+    fig.update_yaxes(title_text='Fishing effort  E', title_font=_LABEL_FONT, row=1, col=1)
+    fig.update_layout(
+        height=560,
+        title_text='Attractors in the S–E plane (post-transient, with mean F̄ / F̄P̄)',
+        title_y=1.0,
+        title_font=dict(color='#1a1a1a', size=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.06, font=dict(color='#2c2c2c', size=14)),
+        margin=dict(t=100, b=40),
+    )
+    for annotation in fig.layout.annotations[:len(alpha_values)]:
+        annotation.font = _LABEL_FONT
+    return fig

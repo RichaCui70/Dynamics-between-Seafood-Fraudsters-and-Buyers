@@ -24,7 +24,7 @@ DynamicalSystem(params, state, equation_form="nondimensionalized" | "dimensional
 ```
 
 - `params` — dict of model coefficients (falls back to `DEFAULT_PARAMS`)
-- `state` — `{'S', 'E', 'F', 'FP'}` (stored as `np.float128`)
+- `state` — `{'S', 'E', 'F', 'FP'}` (stored as `np.longdouble`)
 - `equation_form` — which equation set `system_map()` advances
 
 ### State update & observables

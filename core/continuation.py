@@ -23,7 +23,7 @@ def _clamp_state(state_vector):
 
 def _build_system(params_at, mu, initial_state, equation_form):
     """Build a DynamicalSystem at parameter value mu."""
-    state = {key: np.float128(value) for key, value in initial_state.items()}
+    state = {key: np.longdouble(value) for key, value in initial_state.items()}
     return DynamicalSystem(params_at(float(mu)), state, equation_form)
 
 
@@ -87,7 +87,12 @@ def _null_space_tangent(jacobian_x, jacobian_mu, scaling, previous_tangent=None,
     augmented = np.column_stack([jacobian_x - identity, jacobian_mu])
     # Work in scaled coordinates: A_scaled = A @ D so singular vectors are fair.
     scaled_augmented = augmented @ scaling
-    _, _, right_singular_vectors = np.linalg.svd(scaled_augmented, full_matrices=True)
+    if not np.all(np.isfinite(scaled_augmented)):
+        return None
+    try:
+        _, _, right_singular_vectors = np.linalg.svd(scaled_augmented, full_matrices=True)
+    except np.linalg.LinAlgError:
+        return None
     scaled_tangent = right_singular_vectors[-1, :].astype(np.float64)
     raw_tangent = scaling @ scaled_tangent
     norm = np.linalg.norm(raw_tangent)

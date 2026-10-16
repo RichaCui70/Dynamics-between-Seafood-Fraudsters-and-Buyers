@@ -37,7 +37,7 @@ def eez_time_series(alpha: float, f_threshold: float, simulation_timesteps: int,
     params.update(_eez_params(alpha))
     params['F_threshold'] = f_threshold
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -53,7 +53,7 @@ def eez_time_series_vs_f_threshold(alpha_held: float, f_threshold: float,
     params.update(_eez_params(alpha_held))
     params['F_threshold'] = f_threshold
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}
@@ -94,9 +94,9 @@ def eez_baseline(simulation_timesteps: int, system_param_overrides: tuple = ()) 
     params.update(_eez_params(0.0))
     params.update({'F_threshold': 0.5})
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
-    state['F'] = np.float128(0.0)
-    state['FP'] = np.float128(0.0)
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
+    state['F'] = np.longdouble(0.0)
+    state['FP'] = np.longdouble(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     burn_in_steps = int(simulation_timesteps * 0.6)
@@ -117,9 +117,9 @@ def eez_baseline_time_series(simulation_timesteps: int,
     params.update(_eez_params(0.0))
     params.update({'F_threshold': 0.5})
     initial_state = initial_state_from_overrides(system_param_overrides)
-    state = {k: np.float128(v) for k, v in initial_state.items()}
-    state['F'] = np.float128(0.0)
-    state['FP'] = np.float128(0.0)
+    state = {k: np.longdouble(v) for k, v in initial_state.items()}
+    state['F'] = np.longdouble(0.0)
+    state['FP'] = np.longdouble(0.0)
     system = DynamicalSystem(params, state, "dimensionalized")
     time_series = system.generate_time_series(num_timesteps=simulation_timesteps)
     return {k: v.astype(np.float64) for k, v in time_series.items()}

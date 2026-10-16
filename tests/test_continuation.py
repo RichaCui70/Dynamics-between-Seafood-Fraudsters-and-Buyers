@@ -63,10 +63,10 @@ def test_continuation_residuals_small_at_sampled_points():
     for index in sample_indices:
         mu = float(branch['param_values'][index])
         state = {
-            'S': np.float128(branch['S'][index]),
-            'E': np.float128(branch['E'][index]),
-            'F': np.float128(branch['F'][index]),
-            'FP': np.float128(branch['FP'][index]),
+            'S': np.longdouble(branch['S'][index]),
+            'E': np.longdouble(branch['E'][index]),
+            'F': np.longdouble(branch['F'][index]),
+            'FP': np.longdouble(branch['FP'][index]),
         }
         system = DynamicalSystem(_params_at_f_threshold(mu), state, "dimensionalized")
         mapped = system._evaluate_map_vector([
@@ -105,7 +105,7 @@ def test_continuation_matches_independent_fixed_point():
 
         system = DynamicalSystem(
             _params_at_f_threshold(cont_mu),
-            {k: np.float128(v) for k, v in DEFAULT_INIT_STATE.items()},
+            {k: np.longdouble(v) for k, v in DEFAULT_INIT_STATE.items()},
             "dimensionalized",
         )
         independent = system.find_fixed_point(
