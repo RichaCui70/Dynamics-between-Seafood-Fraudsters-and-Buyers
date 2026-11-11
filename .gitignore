@@ -4,6 +4,6 @@ __pycache__
 .cursor
 .claude
 literature
-papers
 hypothesis
 .pytest_cache
+paper
